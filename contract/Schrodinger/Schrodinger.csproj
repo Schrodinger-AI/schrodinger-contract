@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <RootNamespace>Schrodinger</RootNamespace>
+        <IsContract>true</IsContract>
+        <PackageId>Schrodinger</PackageId>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Description>Schrodinger</Description>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    </PropertyGroup>
+    <ItemGroup>
+        <CommonMessage Include="..\..\protobuf\authority_info.proto">
+            <Link>Protobuf\Proto\authority_info.proto</Link>
+        </CommonMessage>
+    </ItemGroup>
+    <ItemGroup>
+        <ContractReference Include="..\..\protobuf\acs0.proto">
+            <Link>Protobuf\Proto\acs0.proto</Link>
+        </ContractReference>
+        <ContractReference Include="..\..\protobuf\aedpos_contract.proto">
+            <Link>Protobuf\Proto\aedpos_contract.proto</Link>
+        </ContractReference>
+        <ContractReference Include="..\..\protobuf\token_contract.proto">
+            <Link>Protobuf\Proto\token_contract.proto</Link>
+        </ContractReference>
+    </ItemGroup>
+    <ItemGroup>
+        <ContractReference Include="..\..\protobuf\points_contract.proto">
+            <Link>Protobuf\Proto\points_contract.proto</Link>
+        </ContractReference>
+    </ItemGroup>
+    <ItemGroup>
+        <ContractBase Include="..\..\protobuf\acs12.proto">
+            <Link>Protobuf\Proto\reference\acs12.proto</Link>
+        </ContractBase>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ContractCode Include="..\..\protobuf\schrodinger_contract.proto">
+            <Link>Protobuf\Proto\schrodinger_contract.proto</Link>
+        </ContractCode>
+    </ItemGroup>
+    
+</Project>
