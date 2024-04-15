@@ -1,0 +1,68 @@
+// the version of the language, use proto3 for contracts
+syntax = "proto3";
+
+import "aelf/core.proto";
+import "aelf/options.proto";
+import "acs12.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "SchrodingerMain";
+
+service SchrodingerMainContract {
+  option (aelf.base) = "acs12.proto";
+  option (aelf.csharp_state) = "Schrodinger.Main.SchrodingerMainContractState";
+
+  // core
+  rpc Initialize(InitializeInput) returns (google.protobuf.Empty) {}
+  rpc Deploy (DeployInput) returns (google.protobuf.Empty) {}
+  rpc SetImageMaxSize (google.protobuf.Int64Value) returns (google.protobuf.Empty) {}
+  rpc GetImageMaxSize (google.protobuf.Empty) returns (google.protobuf.Int64Value) {option (aelf.is_view) = true;}
+  rpc SetAdmin (aelf.Address) returns (google.protobuf.Empty) {}
+  rpc GetAdmin (google.protobuf.Empty) returns (aelf.Address) {option (aelf.is_view) = true;}
+  rpc SetSchrodingerContractAddress (aelf.Address) returns (google.protobuf.Empty) {}
+  rpc GetSchrodingerContractAddress (google.protobuf.Empty) returns (aelf.Address) {option (aelf.is_view) = true;}
+}
+
+message InitializeInput {
+  aelf.Address admin = 1;
+  int64 image_max_size = 2;
+  aelf.Address schrodinger_contract_address = 3;
+}
+
+message DeployInput {
+  string tick = 1;
+  string image = 2;
+  string seed_symbol = 3;
+  string token_name = 4;
+  int32 decimals = 5;
+  int32 issue_chain_id = 6;
+  string image_uri = 7;
+}
+
+message ExternalInfos {
+  map<string, string> value = 1;
+}
+
+message DeployInscriptionInfo {
+  string p = 1;
+  string op = 2;
+  string tick = 3;
+  string max = 4;
+  string lim = 5;
+}
+
+// log event
+message CollectionDeployed {
+  option (aelf.is_event) = true;
+  string symbol = 1;
+  int64 total_supply = 2;
+  aelf.Address issuer = 3;
+  aelf.Address owner = 4;
+  int32 issue_chain_id = 5;
+  ExternalInfos collection_external_infos = 6;
+  aelf.Address deployer = 7;
+  string token_name = 8;
+  int32 decimals = 9;
+  string image_uri = 10;
+}

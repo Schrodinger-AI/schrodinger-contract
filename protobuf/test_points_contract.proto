@@ -1,0 +1,36 @@
+// the version of the language, use proto3 for contracts
+syntax = "proto3";
+
+import "aelf/core.proto";
+import "aelf/options.proto";
+import "acs12.proto";
+
+option csharp_namespace = "Schrodinger.Contracts.TestPointsContract";
+
+service TestPointsContract {
+  option (aelf.base) = "acs12.proto";
+  option (aelf.csharp_state) = "Schrodinger.Contracts.TestPointsContract.TestPointsContractState";
+
+  // Initialize.
+  rpc Join(JoinInput) returns (google.protobuf.Empty) {}
+  rpc Settle(SettleInput) returns (google.protobuf.Empty) {}
+  rpc AcceptReferral (AcceptReferralInput) returns (google.protobuf.Empty) {}
+}
+
+message JoinInput {
+  aelf.Hash dapp_id = 1;
+  string domain = 2; // 
+  aelf.Address registrant = 3;
+}
+
+message SettleInput {
+  aelf.Address user_address = 1;
+  string action_name = 2;
+  aelf.Hash dapp_id = 3;
+}
+
+message AcceptReferralInput {
+  aelf.Hash dapp_id = 1;
+  aelf.Address referrer = 2;
+  aelf.Address invitee = 3;
+}

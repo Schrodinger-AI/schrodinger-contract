@@ -1,0 +1,527 @@
+// the version of the language, use proto3 for contracts
+syntax = "proto3";
+
+import "aelf/core.proto";
+import "aelf/options.proto";
+import "acs12.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "Schrodinger";
+
+service SchrodingerContract {
+  option (aelf.base) = "acs12.proto";
+  option (aelf.csharp_state) = "Schrodinger.SchrodingerContractState";
+
+  // core
+  rpc Initialize(InitializeInput) returns (google.protobuf.Empty) {}
+  rpc Deploy (DeployInput) returns (google.protobuf.Empty) {}
+  rpc Adopt (AdoptInput) returns (google.protobuf.Empty) {}
+  rpc Confirm (ConfirmInput) returns (google.protobuf.Empty) {}
+  rpc Reroll (RerollInput) returns (google.protobuf.Empty) {}
+
+  // token
+  rpc SetFixedAttribute (SetAttributeInput) returns (google.protobuf.Empty) {}
+  rpc SetRandomAttribute (SetAttributeInput) returns (google.protobuf.Empty) {}
+  rpc SetAttributesPerGen (SetAttributesPerGenInput) returns (google.protobuf.Empty) {}
+  rpc SetMaxGeneration (SetMaxGenerationInput) returns (google.protobuf.Empty) {}
+  rpc SetRates (SetRatesInput) returns (google.protobuf.Empty) {}
+  rpc SetRecipient (SetRecipientInput) returns (google.protobuf.Empty) {}
+  rpc SetImageCount (SetImageCountInput) returns (google.protobuf.Empty) {}
+  rpc SetInscriptionAdmin (SetInscriptionAdminInput) returns (google.protobuf.Empty) {}
+  rpc SetCrossGenerationConfig (SetCrossGenerationConfigInput) returns (google.protobuf.Empty) {}
+  rpc SetSignatory (SetSignatoryInput) returns (google.protobuf.Empty) {}
+  rpc GetSignatory (google.protobuf.StringValue) returns (aelf.Address) {option (aelf.is_view) = true;}
+  rpc GetInscriptionInfo (google.protobuf.StringValue) returns (InscriptionInfo) {option (aelf.is_view) = true;}
+  rpc GetTick (google.protobuf.StringValue) returns (google.protobuf.StringValue) {option (aelf.is_view) = true;}
+  rpc GetParent (google.protobuf.StringValue) returns (google.protobuf.StringValue) {option (aelf.is_view) = true;}
+  rpc GetAttributeTypes (google.protobuf.StringValue) returns (AttributeInfos) {option (aelf.is_view) = true;}
+  rpc GetAttributeValues (GetAttributeValuesInput) returns (AttributeInfos) {option (aelf.is_view) = true;}
+  rpc GetAdoptInfo (aelf.Hash) returns (AdoptInfo) {option (aelf.is_view) = true;}
+  rpc GetTokenInfo (google.protobuf.StringValue) returns (GetTokenInfoOutput) {option (aelf.is_view) = true;}
+
+  // contract
+  rpc SetConfig (Config) returns (google.protobuf.Empty) {}
+  rpc SetAdmin(aelf.Address) returns (google.protobuf.Empty) {}
+  rpc GetAdmin (google.protobuf.Empty) returns (aelf.Address){option (aelf.is_view) = true;}
+  rpc SetMaxGenerationConfig (google.protobuf.Int32Value) returns (google.protobuf.Empty) {}
+  rpc SetImageMaxSize (google.protobuf.Int64Value) returns (google.protobuf.Empty) {}
+  rpc SetImageMaxCount (google.protobuf.Int64Value) returns (google.protobuf.Empty) {}
+  rpc SetAttributeConfig (SetAttributeConfigInput) returns (google.protobuf.Empty) {}
+  rpc GetConfig (google.protobuf.Empty) returns (Config) {option (aelf.is_view) = true;}
+  rpc SetImageUriMaxSize (google.protobuf.Int64Value) returns (google.protobuf.Empty) {}
+  rpc GetImageUriMaxSize (google.protobuf.Empty) returns (google.protobuf.Int64Value) {option (aelf.is_view) = true;}
+
+  // point contract
+  rpc SetPointsContractDAppId(aelf.Hash) returns (google.protobuf.Empty) {}
+  rpc SetPointsContract(aelf.Address) returns (google.protobuf.Empty) {}
+  rpc SetPointsProportionList (SetPointsProportionListInput) returns (google.protobuf.Empty) {}
+  rpc SetPointsSettleAdmin (aelf.Address) returns (google.protobuf.Empty) {}
+  rpc BatchSettle (BatchSettleInput) returns (google.protobuf.Empty) {}
+  rpc Join(JoinInput) returns (google.protobuf.Empty) {}
+  rpc AcceptReferral (AcceptReferralInput) returns (google.protobuf.Empty) {}
+
+  rpc GetPointsContractDAppId (google.protobuf.Empty) returns (aelf.Hash){option (aelf.is_view) = true;}
+  rpc GetPointsContract(google.protobuf.Empty) returns (aelf.Address) {option (aelf.is_view) = true;}
+  rpc GetJoinRecord (aelf.Address) returns (google.protobuf.BoolValue){option (aelf.is_view) = true;}
+  rpc GetPointsProportion(google.protobuf.StringValue) returns (google.protobuf.Int64Value) {option (aelf.is_view) = true;}
+  rpc GetPointsSettleAdmin(google.protobuf.Empty) returns (aelf.Address) {option (aelf.is_view) = true;}
+
+  rpc TransferFromReceivingAddress (TransferFromReceivingAddressInput) returns (google.protobuf.Empty) {}
+  rpc GetReceivingAddress (google.protobuf.StringValue) returns (aelf.Address) {option (aelf.is_view) = true;}
+}
+
+message JoinInput {
+  string domain = 1;
+}
+
+message InitializeInput {
+  aelf.Address admin = 1;
+  aelf.Address points_contract = 2;
+  aelf.Hash points_contract_dapp_id = 3;
+  int32 max_gen = 4;
+  int64 image_max_size = 5;
+  int64 image_max_count = 6;
+  int64 trait_type_max_count = 7;
+  int64 trait_value_max_count = 8;
+  int64 attribute_max_length = 9;
+  int32 max_attributes_per_gen = 10;
+  int64 fixed_trait_type_max_count = 11;
+  int64 image_uri_max_size = 12;
+}
+
+message DeployInput {
+  string tick = 1;
+  int32 max_generation = 2;
+  int64 total_supply = 3;
+  int32 decimals = 4;
+  int64 loss_rate = 5;
+  int64 commission_rate = 6;
+  AttributeLists attribute_lists = 7;
+  int32 image_count = 8;
+  aelf.Address recipient = 9;
+  aelf.Address issuer = 10;
+  string image = 11;
+  CrossGenerationConfig cross_generation_config = 12;
+  bool is_weight_enabled = 13;
+  aelf.Address admin = 14;
+  int32 attributes_per_gen = 15;
+  string domain = 16;
+  aelf.Address signatory = 17;
+  string image_uri = 18;
+}
+
+message DeployInscriptionInfo {
+  string p = 1;
+  string op = 2;
+  string tick = 3;
+  string max = 4;
+  string lim = 5;
+  string gen = 6;
+}
+
+message AdoptInscriptionInfo {
+  string p = 1;
+  string op = 2;
+  string tick = 3;
+  string amt = 4;
+  string gen = 5;
+}
+
+message AttributeLists {
+  repeated AttributeSet fixed_attributes = 1;
+  repeated AttributeSet random_attributes = 2;
+}
+
+message AttributeSets {
+  repeated AttributeSet data = 1;
+}
+
+message AttributeSet {
+  AttributeInfo trait_type = 1;
+  AttributeInfos values = 2;
+}
+
+message AttributeInfos {
+  repeated AttributeInfo data = 1;
+}
+
+message AttributeInfo {
+  string name = 1;
+  int64 weight = 2;
+}
+
+message CrossGenerationConfig {
+  int32 gen = 1;                               // cross generation limit, 0 means no cross generation mechanism
+  bool cross_generation_fixed = 2;             // whether the cross generation quantity is fixed
+  int64 cross_generation_probability = 3;
+  repeated int64 weights = 4;                  // determine the cross generation quantity
+  bool is_weight_enabled = 5;
+}
+
+message ExternalInfos {
+  map<string, string> value = 1;
+}
+
+message AdoptInput {
+  string parent = 1;  // parent symbol
+  int64 amount = 2;
+  string domain = 3;   // for point contract
+}
+
+message AdoptInfo {
+  aelf.Hash adopt_id = 1;
+  string parent = 2;
+  int32 parent_gen = 3;
+  int64 input_amount = 4;
+  int64 output_amount = 5;
+  Attributes parent_attributes = 6;
+  int64 image_count = 7;
+  int64 block_height = 8;             // adopt block height
+  string symbol = 9;                  // generated symbol   
+  string token_name = 10;
+  Attributes attributes = 11;         // generated attributes
+  int32 gen = 12;                     // generated gen
+  aelf.Address adopter = 13;          // sender
+  bool is_confirmed = 14;
+}
+
+message Attributes {
+  repeated Attribute data = 1;
+}
+
+message Attribute {
+  string trait_type = 1;
+  string value = 2;
+}
+
+message ConfirmInput {
+  aelf.Hash adopt_id = 1;
+  string image = 2;           // base64
+  string image_uri = 3;
+  bytes signature = 10000;    // signed by server
+}
+
+message RerollInput {
+  string symbol = 1;
+  int64 amount = 2;
+  string domain = 3;          // for point contract
+}
+
+message SetAttributeInput {
+  string tick = 1;
+  AttributeSet attribute_set = 2;
+}
+
+message SetAttributesPerGenInput {
+  string tick = 1;
+  int32 attributes_per_gen = 2;
+}
+
+message StringList {
+  repeated string data = 1;
+}
+
+message SetMaxGenerationInput {
+  string tick = 1;
+  int32 gen = 2;
+}
+
+message SetRatesInput {
+  string tick = 1;
+  int64 loss_rate = 2;
+  int64 commission_rate = 3;
+}
+
+message SetRecipientInput {
+  string tick = 1;
+  aelf.Address recipient = 2;
+}
+
+message SetImageCountInput {
+  string tick = 1;
+  int32 image_count = 2;
+}
+
+message SetInscriptionAdminInput {
+  string tick = 1;
+  aelf.Address admin = 2;
+}
+
+message SetCrossGenerationConfigInput {
+  string tick = 1;
+  CrossGenerationConfig config = 2;
+}
+
+message GetAttributeValuesInput {
+  string tick = 1;
+  string trait_type = 2;
+}
+
+message SetPointsProportionListInput {
+  repeated PointsProportion data = 1;
+}
+
+message PointsProportion {
+  string action_name = 1;
+  int64 proportion = 2;
+}
+
+message BatchSettleInput {
+  string action_name = 1;
+  repeated UserPoints user_points_list = 2;
+}
+
+message UserPoints {
+  aelf.Address user_address = 1;
+  int64 user_points = 2;
+  aelf.BigIntValue user_points_value = 3;
+}
+
+message InscriptionInfo {
+  string ancestor = 1;             // gen0
+  int32 decimals = 2;
+  int32 max_gen = 3;
+  int64 loss_rate = 4;
+  int64 commission_rate = 5;
+  aelf.Address recipient = 6;      // receive commission address
+  aelf.Address admin = 7;
+  CrossGenerationConfig cross_generation_config = 8;
+  bool is_weight_enabled = 9;
+  int32 image_count = 10;
+  int32 attributes_per_gen = 11;
+}
+
+message GetTokenInfoOutput {
+  aelf.Hash adopt_id = 1;
+  string parent = 2;
+  int32 parent_gen = 3;
+  Attributes parent_attributes = 4;
+  Attributes attributes = 5;
+  int32 gen = 6;
+}
+
+message SetAttributeConfigInput {
+  int64 trait_type_max_count = 1;
+  int64 trait_value_max_count = 2;
+  int64 attribute_max_length = 3;
+  int32 max_attributes_per_gen = 4;
+  int64 fixed_trait_type_max_count = 5;
+}
+
+message Config {
+  int32 max_gen = 1;
+  int64 image_max_size = 2;
+  int64 image_max_count = 3;
+  int64 trait_type_max_count = 4;
+  int64 trait_value_max_count = 5;
+  int64 attribute_max_length = 6;
+  int32 max_attributes_per_gen = 7;
+  int64 fixed_trait_type_max_count = 8;
+  int64 image_uri_max_size = 9;
+}
+
+message ItemWithWeight {
+  string item = 1;
+  int64 weight = 2;
+}
+
+message SetSignatoryInput {
+  string tick = 1;
+  aelf.Address signatory = 2;
+}
+
+message AcceptReferralInput {
+  aelf.Address referrer = 1;
+}
+
+message TransferFromReceivingAddressInput {
+  string tick = 1;
+  int64 amount = 2;
+  aelf.Address recipient = 3;
+}
+
+// log event
+message Joined {
+  option (aelf.is_event) = true;
+  string domain = 2;
+  aelf.Address registrant = 3;
+}
+
+message Deployed {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  string ancestor = 2;
+  int32 max_generation = 3;
+  int64 total_supply = 4;
+  int32 decimals = 5;
+  AttributeLists attribute_lists = 6;
+  int32 image_count = 7;
+  aelf.Address issuer = 8;
+  aelf.Address owner = 9;
+  int32 issue_chain_id = 10;
+  ExternalInfos external_infos = 11;
+  string token_name = 12;
+  aelf.Address deployer = 13;
+  CrossGenerationConfig cross_generation_config = 14;
+  bool is_weight_enabled = 15;
+  aelf.Address admin = 16;
+  int64 loss_rate = 17;
+  int64 commission_rate = 18;
+  int32 attributes_per_gen = 19;
+  aelf.Address signatory = 20;
+  string image_uri = 21;
+}
+
+message Adopted {
+  option (aelf.is_event) = true;
+  aelf.Hash adopt_id = 1;
+  string parent = 2;
+  int32 parent_gen = 3;
+  int64 input_amount = 4;
+  int64 loss_amount = 5;
+  int64 commission_amount = 6;
+  int64 output_amount = 7;
+  int64 image_count = 8;
+  aelf.Address adopter = 9;
+  int64 block_height = 10;                 // adopt block height
+  Attributes attributes = 11;              // generated attributes
+  int32 gen = 12;                          // generated generation
+  string ancestor = 13;
+  string symbol = 14;
+  string token_name = 15;
+}
+
+message Confirmed {
+  option (aelf.is_event) = true;
+  aelf.Hash adopt_id = 1;
+  string parent = 2;
+  string symbol = 3;
+  int64 total_supply = 4;
+  int32 decimals = 5;
+  int32 gen = 6;
+  Attributes attributes = 7;
+  aelf.Address issuer = 8;
+  aelf.Address owner = 9;
+  int32 issue_chain_id = 10;
+  ExternalInfos external_infos = 11;
+  string token_name = 12;
+  aelf.Address deployer = 13;
+  string image_uri = 14;
+}
+
+message Rerolled {
+  option (aelf.is_event) = true;
+  string symbol = 1;
+  string ancestor = 2;
+  int64 amount = 3;
+  aelf.Address recipient = 4;
+}
+
+message FixedAttributeSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  AttributeSet removed_attribute = 2;
+  AttributeSet added_attribute = 3;
+}
+
+message RandomAttributeSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  AttributeSet removed_attribute = 2;
+  AttributeSet added_attribute = 3;
+}
+
+message AttributesPerGenerationSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  int32 attributes_per_gen = 2;
+}
+
+message ImageCountSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  int32 image_count = 2;
+}
+
+message MaxGenerationSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  int32 gen = 2;
+}
+
+message RatesSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  int64 loss_rate = 2;
+  int64 commission_rate = 3;
+}
+
+message RecipientSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  aelf.Address recipient = 2;
+}
+
+message InscriptionAdminSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  aelf.Address admin = 2;
+}
+
+message CrossGenerationConfigSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  CrossGenerationConfig cross_generation_config = 2;
+}
+
+message ConfigSet {
+  option (aelf.is_event) = true;
+  Config config = 1;
+}
+
+message MaxGenerationConfigSet {
+  option (aelf.is_event) = true;
+  int32 max_gen = 1;
+}
+
+message ImageMaxSizeSet {
+  option (aelf.is_event) = true;
+  int64 image_max_size = 1;
+}
+
+message ImageMaxCountSet {
+  option (aelf.is_event) = true;
+  int64 image_max_count = 1;
+}
+
+message AttributeConfigSet {
+  option (aelf.is_event) = true;
+  int64 trait_type_max_count = 1;
+  int64 trait_value_max_count = 2;
+  int64 attribute_max_length = 3;
+  int32 max_attributes_per_gen = 4;
+  int64 fixed_trait_type_max_count = 5;
+}
+
+message AdminSet {
+  option (aelf.is_event) = true;
+  aelf.Address admin = 1;
+}
+
+message SignatorySet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  aelf.Address signatory = 2;
+}
+
+message ImageUriMaxSizeSet {
+  option (aelf.is_event) = true;
+  int64 image_uri_max_size = 1;
+}
+
+message ReferralAccepted {
+  option (aelf.is_event) = true;
+  aelf.Address referrer = 1;
+  aelf.Address invitee = 2;
+}
