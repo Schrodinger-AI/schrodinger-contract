@@ -20,13 +20,14 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '7.0'
-      #- name: Verify Elasticsearch connection
-      #  env:
-      #    ELASTIC_SEARCH_URL: http://127.0.0.1:${{ job.services.elasticsearch.ports[9200] }}
-      #  run: |
-      #    echo $ELASTIC_SEARCH_URL
-      #    curl -fsSL "$ELASTIC_SEARCH_URL/_cat/health?h=status"
+          dotnet-version: '6.0'
+
+      - name: 'Download AElf build tools'
+        run: bash scripts/download_binary.sh
+
+      - name: 'Install protobuf'
+        run: bash scripts/install.sh
+
       - name: Install dependencies
         run: dotnet restore --verbosity quiet
 
