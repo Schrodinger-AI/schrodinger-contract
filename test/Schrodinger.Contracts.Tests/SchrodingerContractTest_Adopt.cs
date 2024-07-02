@@ -187,6 +187,41 @@ public partial class SchrodingerContractTests
         GetTokenBalance(Gen0, User2Address).Result.ShouldBe(1);
     }
 
+    [Fact]
+    public async Task AdoptMaxGenTests()
+    { 
+        await DeployTest();
+        
+        await TokenContractStub.Issue.SendAsync(new IssueInput
+        {
+            Symbol = Gen0,
+            Amount = 1000,
+            To = DefaultAddress
+        });
+
+        await TokenContractStub.Approve.SendAsync(new ApproveInput
+        {
+            Symbol = Gen0,
+            Amount = 1000,
+            Spender = SchrodingerContractAddress
+        });
+        
+        var result = await SchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
+        {
+            Tick = "SGR",
+            Amount = 1000,
+            Domain = "test"
+        });
+
+        var log = GetLogEvent<Adopted>(result.TransactionResult);
+        log.Ancestor.ShouldBe(Gen0);
+        log.Adopter.ShouldBe(DefaultAddress);
+        log.InputAmount.ShouldBe(1000);
+        log.OutputAmount.ShouldBe(500);
+        log.LossAmount.ShouldBe(450);
+        log.CommissionAmount.ShouldBe(50);
+    }
+
     private async Task SetPointsProportion()
     {
         await SchrodingerContractStub.SetPointsProportionList.SendAsync(new SetPointsProportionListInput

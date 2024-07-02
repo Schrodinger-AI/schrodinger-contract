@@ -19,6 +19,7 @@ service SchrodingerContract {
   rpc Adopt (AdoptInput) returns (google.protobuf.Empty) {}
   rpc Confirm (ConfirmInput) returns (google.protobuf.Empty) {}
   rpc Reroll (RerollInput) returns (google.protobuf.Empty) {}
+  rpc AdoptMaxGen (AdoptMaxGenInput) returns (google.protobuf.Empty) {}
 
   // token
   rpc SetFixedAttribute (SetAttributeInput) returns (google.protobuf.Empty) {}
@@ -109,6 +110,7 @@ message DeployInput {
   string domain = 16;
   aelf.Address signatory = 17;
   string image_uri = 18;
+  int64 max_gen_loss_rate = 19;
 }
 
 message DeployInscriptionInfo {
@@ -208,6 +210,12 @@ message RerollInput {
   string domain = 3;          // for point contract
 }
 
+message AdoptMaxGenInput {
+  string tick = 1;
+  int64 amount = 2;
+  string domain = 3;
+}
+
 message SetAttributeInput {
   string tick = 1;
   AttributeSet attribute_set = 2;
@@ -231,6 +239,7 @@ message SetRatesInput {
   string tick = 1;
   int64 loss_rate = 2;
   int64 commission_rate = 3;
+  int64 max_gen_loss_rate = 4;
 }
 
 message SetRecipientInput {
@@ -290,6 +299,7 @@ message InscriptionInfo {
   bool is_weight_enabled = 9;
   int32 image_count = 10;
   int32 attributes_per_gen = 11;
+  int64 max_gen_loss_rate = 12;
 }
 
 message GetTokenInfoOutput {
@@ -371,6 +381,7 @@ message Deployed {
   int32 attributes_per_gen = 19;
   aelf.Address signatory = 20;
   string image_uri = 21;
+  int64 max_gen_loss_rate = 22;
 }
 
 message Adopted {
@@ -455,6 +466,7 @@ message RatesSet {
   string tick = 1;
   int64 loss_rate = 2;
   int64 commission_rate = 3;
+  int64 max_gen_loss_rate = 4;
 }
 
 message RecipientSet {

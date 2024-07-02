@@ -231,8 +231,8 @@ public partial class SchrodingerContract
         var weight = 0L;
         foreach (var sourceTraitValue in sourceTraitValues.Data)
         {
+            Assert(uniqueSet.Add(sourceTraitValue.Name), $"Duplicate trait type {sourceTraitValue.Name}");
             weight += sourceTraitValue.Weight;
-            if (!uniqueSet.Add(sourceTraitValue.Name)) continue;
             var attributeMaxLength =
                 config?.AttributeMaxLength ?? SchrodingerContractConstants.DefaultAttributeMaxLength;
             Assert(!string.IsNullOrWhiteSpace(sourceTraitValue.Name), "Invalid trait type name.");
@@ -401,7 +401,7 @@ public partial class SchrodingerContract
         Assert(input.Decimals >= 0, "Invalid input decimals.");
         Assert(input.TotalSupply > 0, "Invalid input total supply.");
 
-        CheckRate(input.LossRate, input.CommissionRate);
+        CheckRate(input.LossRate, input.CommissionRate, input.MaxGenLossRate);
         CheckDeployPermission(input.Tick);
         CheckGeneration(input.MaxGeneration);
         CheckAttributePerGen(input.AttributesPerGen, input.MaxGeneration);
@@ -413,11 +413,13 @@ public partial class SchrodingerContract
         Assert(IsStringValid(input.ImageUri), "Invalid input image uri.");
     }
 
-    private void CheckRate(long lossRate, long commissionRate)
+    private void CheckRate(long lossRate, long commissionRate, long maxGenLossRate)
     {
         Assert(lossRate >= 0 && lossRate <= SchrodingerContractConstants.Denominator, "Invalid loss rate.");
         Assert(commissionRate >= 0 && commissionRate <= SchrodingerContractConstants.Denominator,
             "Invalid commission rate.");
+        Assert(maxGenLossRate >= 0 && maxGenLossRate <= SchrodingerContractConstants.Denominator,
+            "Invalid max gen loss rate.");
     }
 
     private void CheckDeployPermission(string tick)

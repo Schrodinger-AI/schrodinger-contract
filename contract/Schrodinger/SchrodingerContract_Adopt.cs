@@ -40,8 +40,8 @@ public partial class SchrodingerContract
 
         State.AdoptInfoMap[adoptId] = adoptInfo;
 
-        CalculateAmount(inscriptionInfo, input.Amount, out var lossAmount, out var commissionAmount,
-            out var outputAmount);
+        CalculateAmount(inscriptionInfo.LossRate, inscriptionInfo.CommissionRate, input.Amount, out var lossAmount,
+            out var commissionAmount, out var outputAmount);
 
         var minOutputAmount = new BigIntValue(SchrodingerContractConstants.Ten).Pow(inscriptionInfo.Decimals);
         Assert(outputAmount >= minOutputAmount, "Input amount not enough.");
@@ -118,17 +118,17 @@ public partial class SchrodingerContract
         }
     }
 
-    private void CalculateAmount(InscriptionInfo inscriptionInfo, long inputAmount, out long lossAmount,
+    private void CalculateAmount(long lossRate, long commissionRate, long inputAmount, out long lossAmount,
         out long commissionAmount, out long outputAmount)
     {
         // calculate amount
-        lossAmount = inputAmount.Mul(inscriptionInfo.LossRate).Div(SchrodingerContractConstants.Denominator);
-        if (lossAmount == 0 && inscriptionInfo.LossRate != 0) lossAmount = lossAmount.Add(1);
+        lossAmount = inputAmount.Mul(lossRate).Div(SchrodingerContractConstants.Denominator);
+        if (lossAmount == 0 && lossRate != 0) lossAmount = lossAmount.Add(1);
 
         outputAmount = inputAmount.Sub(lossAmount);
 
-        commissionAmount = lossAmount.Mul(inscriptionInfo.CommissionRate).Div(SchrodingerContractConstants.Denominator);
-        if (commissionAmount == 0 && inscriptionInfo.CommissionRate != 0) commissionAmount = commissionAmount.Add(1);
+        commissionAmount = lossAmount.Mul(commissionRate).Div(SchrodingerContractConstants.Denominator);
+        if (commissionAmount == 0 && commissionRate != 0) commissionAmount = commissionAmount.Add(1);
 
         lossAmount = lossAmount.Sub(commissionAmount);
     }
@@ -532,5 +532,82 @@ public partial class SchrodingerContract
         });
 
         return new Empty();
+    }
+
+    public override Empty AdoptMaxGen(AdoptMaxGenInput input)
+    {
+        ValidateAdoptMaxGenInput(input);
+        
+        var inscriptionInfo = State.InscriptionInfoMap[input.Tick];
+        Assert(inscriptionInfo != null, "Tick not deployed.");
+
+        var adoptId = GenerateAdoptId(input.Tick);
+        Assert(State.AdoptInfoMap[adoptId] == null, "Adopt id already exists.");
+
+        var parent = GetInscriptionSymbol(input.Tick);
+
+        var adoptInfo = new AdoptInfo
+        {
+            AdoptId = adoptId,
+            Parent = parent,
+            ParentGen = 0,
+            ParentAttributes = new Attributes(),
+            BlockHeight = Context.CurrentHeight,
+            Adopter = Context.Sender,
+            ImageCount = inscriptionInfo.ImageCount,
+            Gen = inscriptionInfo.MaxGen
+        };
+
+        State.AdoptInfoMap[adoptId] = adoptInfo;
+
+        CalculateAmount(inscriptionInfo.MaxGenLossRate, inscriptionInfo.CommissionRate, input.Amount,
+            out var lossAmount, out var commissionAmount, out var outputAmount);
+
+        var minOutputAmount = new BigIntValue(SchrodingerContractConstants.Ten).Pow(inscriptionInfo.Decimals);
+        Assert(outputAmount >= minOutputAmount, "Input amount not enough.");
+
+        adoptInfo.InputAmount = input.Amount;
+        adoptInfo.OutputAmount = outputAmount;
+
+        ProcessAdoptTransfer(parent, input.Amount, lossAmount, commissionAmount, inscriptionInfo.Recipient,
+            inscriptionInfo.Ancestor, 0);
+
+        var randomHash = GetRandomHash(input.Tick);
+        adoptInfo.Attributes = GenerateAttributes(new Attributes(), input.Tick, inscriptionInfo.AttributesPerGen,
+            adoptInfo.Gen, randomHash);
+        adoptInfo.Symbol = GenerateSymbol(input.Tick);
+        adoptInfo.TokenName = GenerateTokenName(adoptInfo.Symbol, adoptInfo.Gen);
+
+        JoinPointsContract(input.Domain);
+        SettlePoints(nameof(Adopt), adoptInfo.InputAmount, inscriptionInfo.Decimals);
+
+        Context.Fire(new Adopted
+        {
+            AdoptId = adoptId,
+            Parent = parent,
+            ParentGen = 0,
+            InputAmount = input.Amount,
+            LossAmount = lossAmount,
+            CommissionAmount = commissionAmount,
+            OutputAmount = outputAmount,
+            ImageCount = inscriptionInfo.ImageCount,
+            Adopter = Context.Sender,
+            BlockHeight = Context.CurrentHeight,
+            Attributes = adoptInfo.Attributes,
+            Gen = adoptInfo.Gen,
+            Ancestor = inscriptionInfo.Ancestor,
+            Symbol = adoptInfo.Symbol,
+            TokenName = adoptInfo.TokenName
+        });
+        
+        return new Empty();
+    }
+    
+    private void ValidateAdoptMaxGenInput(AdoptMaxGenInput input)
+    {
+        Assert(input != null, "Invalid input.");
+        Assert(IsStringValid(input.Tick), "Invalid tick.");
+        Assert(input.Amount > 0, "Invalid amount.");
+        Assert(IsStringValid(input.Domain), "Invalid domain.");
     }
 }

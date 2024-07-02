@@ -114,16 +114,18 @@ public partial class SchrodingerContract
     public override Empty SetRates(SetRatesInput input)
     {
         Assert(IsStringValid(input.Tick), "Invalid input tick.");
-        CheckRate(input.LossRate, input.CommissionRate);
+        CheckRate(input.LossRate, input.CommissionRate, input.MaxGenLossRate);
         var inscription = CheckInscriptionExistAndPermission(input.Tick);
         inscription.CommissionRate = input.CommissionRate;
         inscription.LossRate = input.LossRate;
+        inscription.MaxGenLossRate = input.MaxGenLossRate;
         State.InscriptionInfoMap[input.Tick] = inscription;
         Context.Fire(new RatesSet
         {
             Tick = input.Tick,
             CommissionRate = input.CommissionRate,
-            LossRate = input.LossRate
+            LossRate = input.LossRate,
+            MaxGenLossRate = input.MaxGenLossRate
         });
         return new Empty();
     }

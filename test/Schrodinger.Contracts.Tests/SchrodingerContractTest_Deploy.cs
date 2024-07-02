@@ -115,7 +115,8 @@ public partial class SchrodingerContractTests
                 CrossGenerationFixed = false
             },
             Signatory = DefaultAddress,
-            ImageUri = "uri"
+            ImageUri = "uri",
+            MaxGenLossRate = 5000
         });
         var log = GetLogEvent<Deployed>(result.TransactionResult);
         var inscription = await SchrodingerContractStub.GetInscriptionInfo.CallAsync(new StringValue
@@ -126,6 +127,7 @@ public partial class SchrodingerContractTests
         inscription.MaxGen.ShouldBe(4);
         inscription.CommissionRate.ShouldBe(1000);
         inscription.LossRate.ShouldBe(500);
+        inscription.MaxGenLossRate.ShouldBe(5000);
         inscription.IsWeightEnabled.ShouldBe(true);
         var attributeList = await SchrodingerContractStub.GetAttributeTypes.CallAsync(new StringValue
         {
