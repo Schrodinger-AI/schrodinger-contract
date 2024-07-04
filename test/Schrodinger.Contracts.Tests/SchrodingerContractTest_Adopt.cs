@@ -221,24 +221,4 @@ public partial class SchrodingerContractTests
         log.LossAmount.ShouldBe(450);
         log.CommissionAmount.ShouldBe(50);
     }
-
-    private async Task SetPointsProportion()
-    {
-        await SchrodingerContractStub.SetPointsProportionList.SendAsync(new SetPointsProportionListInput
-        {
-            Data =
-            {
-                new PointsProportion
-                {
-                    ActionName = "Adopt",
-                    Proportion = 131400000000
-                },
-                new PointsProportion
-                {
-                    ActionName = "Reroll",
-                    Proportion = 191900000000
-                }
-            }
-        });
-    }
 }

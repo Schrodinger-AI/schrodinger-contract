@@ -226,6 +226,7 @@ public partial class SchrodingerContract
         Assert(sourceTraitValues != null && sourceTraitValues.Data.Count > 0, "Invalid attribute trait values.");
         var uniqueSet = new HashSet<string>();
         var traitValueMap = State.TraitValueMap[tick][traitTypeName] ?? new AttributeInfos();
+        var weightSums = new LongList();
         traitValueMap.Data.Clear();
         var data = traitValueMap.Data.ToList();
         var weight = 0L;
@@ -233,6 +234,7 @@ public partial class SchrodingerContract
         {
             Assert(uniqueSet.Add(sourceTraitValue.Name), $"Duplicate trait type {sourceTraitValue.Name}");
             weight += sourceTraitValue.Weight;
+            weightSums.Data.Add(weight);
             var attributeMaxLength =
                 config?.AttributeMaxLength ?? SchrodingerContractConstants.DefaultAttributeMaxLength;
             Assert(!string.IsNullOrWhiteSpace(sourceTraitValue.Name), "Invalid trait type name.");
@@ -249,6 +251,7 @@ public partial class SchrodingerContract
         traitValueMap.Data.AddRange(data);
         State.TraitValueMap[tick][traitTypeName] = traitValueMap;
         State.TraitValueTotalWeightsMap[tick][traitTypeName] = weight;
+        State.WeightSumsMap[tick][traitTypeName] = weightSums;
     }
 
     private InscriptionInfo CheckParamsAndGetInscription(SetAttributeInput input)

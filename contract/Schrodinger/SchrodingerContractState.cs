@@ -48,4 +48,6 @@ public partial class SchrodingerContractState : ContractState
     // action name -> proportion
     public MappedState<string, long> PointsProportion { get; set; }
     public SingletonState<Address> PointsSettleAdmin { get; set; }
+    
+    public MappedState<string, string, LongList> WeightSumsMap { get; set; }
 }

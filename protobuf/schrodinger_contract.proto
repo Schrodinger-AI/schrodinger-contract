@@ -70,6 +70,20 @@ service SchrodingerContract {
 
   rpc TransferFromReceivingAddress (TransferFromReceivingAddressInput) returns (google.protobuf.Empty) {}
   rpc GetReceivingAddress (google.protobuf.StringValue) returns (aelf.Address) {option (aelf.is_view) = true;}
+
+  rpc TestAdoptMaxGen (TestAdoptMaxGenInput) returns (google.protobuf.Empty) {}
+  rpc TestSetWeightSums (TestWeightSumsInput) returns (google.protobuf.Empty) {}
+  rpc TestGetWeightSums (TestWeightSumsInput) returns (LongList) {option (aelf.is_view) = true;}
+  rpc TestGetTotalWeight (TestWeightSumsInput) returns (google.protobuf.Int64Value) {option (aelf.is_view) = true;}
+}
+
+message TestWeightSumsInput {
+  string tick = 1;
+  string trait_type = 2;
+}
+
+message LongList {
+  repeated int64 data = 1;
 }
 
 message JoinInput {
@@ -216,6 +230,13 @@ message AdoptMaxGenInput {
   string domain = 3;
 }
 
+message TestAdoptMaxGenInput {
+  string tick = 1;
+  int64 amount = 2;
+  string domain = 3;
+  int32 gen = 4;
+}
+
 message SetAttributeInput {
   string tick = 1;
   AttributeSet attribute_set = 2;
@@ -329,11 +350,6 @@ message Config {
   int32 max_attributes_per_gen = 7;
   int64 fixed_trait_type_max_count = 8;
   int64 image_uri_max_size = 9;
-}
-
-message ItemWithWeight {
-  string item = 1;
-  int64 weight = 2;
 }
 
 message SetSignatoryInput {
