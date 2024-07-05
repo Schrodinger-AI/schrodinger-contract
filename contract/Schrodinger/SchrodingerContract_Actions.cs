@@ -1,4 +1,5 @@
 using AElf;
+using AElf.Sdk.CSharp;
 using AElf.Types;
 using Google.Protobuf.WellKnownTypes;
 
@@ -75,6 +76,25 @@ public partial class SchrodingerContract : SchrodingerContractContainer.Schrodin
 
         State.PointsContract.Value = input;
 
+        return new Empty();
+    }
+
+    public override Empty SetOfficialDomainAlias(SetOfficialDomainAliasInput input)
+    {
+        Assert(input != null && IsStringValid(input.Alias), "Invalid input.");
+        CheckAdminPermission();
+
+        if (State.OfficialDomainAlias.Value == input!.Alias)
+        {
+            return new Empty();
+        }
+
+        State.OfficialDomainAlias.Value = input.Alias;
+        
+        Context.Fire(new OfficialDomainAliasSet
+        {
+            Alias = input.Alias
+        });
         return new Empty();
     }
 }

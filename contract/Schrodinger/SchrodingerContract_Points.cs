@@ -34,10 +34,13 @@ public partial class SchrodingerContract
 
         if (State.JoinRecord[registrant]) return;
 
-        domain ??= State.PointsContract.GetDappInformation.Call(new GetDappInformationInput
+        if (domain == null || domain == State.OfficialDomainAlias.Value)
         {
-            DappId = State.PointsContractDAppId.Value
-        })?.DappInfo?.OfficialDomain;
+            domain = State.PointsContract.GetDappInformation.Call(new GetDappInformationInput
+            {
+                DappId = State.PointsContractDAppId.Value
+            })?.DappInfo?.OfficialDomain;
+        }
 
         State.JoinRecord[registrant] = true;
 
