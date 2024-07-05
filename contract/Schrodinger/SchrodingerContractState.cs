@@ -50,4 +50,6 @@ public partial class SchrodingerContractState : ContractState
     public SingletonState<Address> PointsSettleAdmin { get; set; }
     
     public MappedState<string, string, LongList> WeightSumsMap { get; set; }
+    
+    public SingletonState<string> OfficialDomainAlias { get; set; }
 }
