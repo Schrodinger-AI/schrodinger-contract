@@ -67,7 +67,9 @@ public partial class SchrodingerContract
 
     private Address GetReceivingAddress(string tick)
     {
-        return State.InscriptionInfoMap[tick] == null ? new Address() : Context.ConvertVirtualAddressToContractAddress(HashHelper.ComputeFrom(tick));
+        return State.InscriptionInfoMap[tick] == null
+            ? new Address()
+            : Context.ConvertVirtualAddressToContractAddress(HashHelper.ComputeFrom(tick));
     }
 
     #region Deploy
@@ -123,14 +125,9 @@ public partial class SchrodingerContract
         }
     }
 
-    private string GetInscriptionSymbol(string tick)
-    {
-        return $"{tick}{SchrodingerContractConstants.Separator}{SchrodingerContractConstants.AncestorSymbolSuffix}";
-    }
-
     private string GetInscriptionCollectionSymbol(string tick)
     {
-        return $"{tick}{SchrodingerContractConstants.Separator}{SchrodingerContractConstants.CollectionSymbolSuffix}";
+        return tick + SchrodingerContractConstants.Separator + SchrodingerContractConstants.CollectionSymbolSuffix;
     }
 
     #endregion

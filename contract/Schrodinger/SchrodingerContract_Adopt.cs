@@ -126,12 +126,12 @@ public partial class SchrodingerContract
     {
         // calculate amount
         lossAmount = inputAmount.Mul(lossRate).Div(SchrodingerContractConstants.Denominator);
-        if (lossAmount == 0 && lossRate != 0) lossAmount = lossAmount.Add(1);
+        if (lossAmount == 0 && lossRate != 0) lossAmount = 1;
 
         outputAmount = inputAmount.Sub(lossAmount);
 
         commissionAmount = lossAmount.Mul(commissionRate).Div(SchrodingerContractConstants.Denominator);
-        if (commissionAmount == 0 && commissionRate != 0) commissionAmount = commissionAmount.Add(1);
+        if (commissionAmount == 0 && commissionRate != 0) commissionAmount = 1;
 
         lossAmount = lossAmount.Sub(commissionAmount);
     }
@@ -216,7 +216,7 @@ public partial class SchrodingerContract
 
         var randomHash = State.ConsensusContract.GetRandomHash.Call(new Int64Value
         {
-            Value = Context.CurrentHeight - 1
+            Value = Context.CurrentHeight
         });
 
         return HashHelper.ConcatAndCompute(HashHelper.ComputeFrom(symbolCount), randomHash);
@@ -317,9 +317,7 @@ public partial class SchrodingerContract
                 attributes.Data.Add(new Attribute
                 {
                     TraitType = attributeInfo.Name,
-                    Value = GetRandomItems(randomHash, attributeInfo.Name,
-                        State.WeightSumsMap[tick][attributeInfo.Name].Data,
-                        State.TraitValueMap[tick][attributeInfo.Name].Data)
+                    Value = GetRandomItems(randomHash, attributeInfo.Name, tick)
                 });
             }
 
@@ -352,8 +350,7 @@ public partial class SchrodingerContract
             attributes.Data.Add(new Attribute
             {
                 TraitType = traitType,
-                Value = GetRandomItems(randomHash, traitType, State.WeightSumsMap[tick][traitType].Data,
-                    State.TraitValueMap[tick][traitType].Data)
+                Value = GetRandomItems(randomHash, traitType, tick)
             });
         }
 
@@ -435,12 +432,12 @@ public partial class SchrodingerContract
 
     private string GenerateSymbol(string tick, long symbolCount)
     {
-        return $"{tick}{SchrodingerContractConstants.Separator}{symbolCount}";
+        return tick + SchrodingerContractConstants.Separator + symbolCount;
     }
 
     private string GenerateTokenName(string symbol, int gen)
     {
-        return $"{symbol}{SchrodingerContractConstants.TokenNameSuffix}{gen.ToString()}";
+        return symbol + SchrodingerContractConstants.TokenNameSuffix + gen;
     }
 
     private ExternalInfo GenerateAdoptExternalInfo(string tick, string image, long totalSupply, int gen,
@@ -601,11 +598,13 @@ public partial class SchrodingerContract
         Assert(IsStringValid(input.Domain), "Invalid domain.");
     }
 
-    private string GetRandomItems(Hash randomHash, string seed, RepeatedField<long> weightSums,
-        RepeatedField<AttributeInfo> attributeInfos)
+    private string GetRandomItems(Hash randomHash, string traitType, string tick)
     {
-        var hash = HashHelper.ConcatAndCompute(randomHash, HashHelper.ComputeFrom(seed));
-        var random = Context.ConvertHashToInt64(hash, 0, weightSums.Last());
+        var weightSums = State.WeightSumsMap[tick][traitType].Data;
+        var attributeInfos = State.TraitValueMap[tick][traitType].Data;
+        
+        var hash = HashHelper.ConcatAndCompute(randomHash, HashHelper.ComputeFrom(traitType));
+        var random = Context.ConvertHashToInt64(hash, 0, weightSums[^1]);
         var index = BinarySearch(weightSums, random);
 
         return attributeInfos[index].Name;
@@ -623,6 +622,7 @@ public partial class SchrodingerContract
             {
                 high = mid;
             }
+            else
             {
                 low = mid + 1;
             }
@@ -636,21 +636,20 @@ public partial class SchrodingerContract
         var attributes = new Attributes();
 
         var fixedAttributeInfo = State.FixedTraitTypeMap[tick].Data;
+        var randomAttributeInfo = State.RandomTraitTypeMap[tick].Data;
 
         foreach (var attributeInfo in fixedAttributeInfo)
         {
             attributes.Data.Add(new Attribute
             {
                 TraitType = attributeInfo.Name,
-                Value = GetRandomItems(randomHash, attributeInfo.Name, State.WeightSumsMap[tick][attributeInfo.Name].Data,
-                    State.TraitValueMap[tick][attributeInfo.Name].Data)
+                Value = GetRandomItems(randomHash, attributeInfo.Name, tick)
             });
         }
 
         // select trait types randomly
         var randomTraitTypes = GetRandomItems(randomHash, nameof(GenerateAttributes),
-            State.RandomTraitTypeMap[tick].Data, amount, 0);
-        // var randomTraitTypes = State.RandomTraitTypeMap[tick].Data.Take(amount).Select(v => v.Name);
+            randomAttributeInfo, amount, 0);
 
         // select trait values randomly
         foreach (var traitType in randomTraitTypes)
@@ -658,8 +657,7 @@ public partial class SchrodingerContract
             attributes.Data.Add(new Attribute
             {
                 TraitType = traitType,
-                Value = GetRandomItems(randomHash, traitType, State.WeightSumsMap[tick][traitType].Data,
-                    State.TraitValueMap[tick][traitType].Data)
+                Value = GetRandomItems(randomHash, traitType, tick)
             });
         }
 
@@ -668,6 +666,11 @@ public partial class SchrodingerContract
 
     public override Empty TestSetWeightSums(TestWeightSumsInput input)
     {
+        State.RandomTraitTypeMap[input.Tick].Data.Remove(new AttributeInfo
+        {
+            Name = input.TraitType,
+            Weight = 0
+        });
         return new Empty();
     }
 
@@ -694,6 +697,7 @@ public partial class SchrodingerContract
         Assert(State.AdoptInfoMap[adoptId] == null, "Adopt id already exists.");
 
         var parent = GetInscriptionSymbol(input.Tick);
+        var gen = input.Gen == 0 ? inscriptionInfo!.MaxGen : input.Gen;
 
         var adoptInfo = new AdoptInfo
         {
@@ -704,7 +708,7 @@ public partial class SchrodingerContract
             BlockHeight = Context.CurrentHeight,
             Adopter = Context.Sender,
             ImageCount = inscriptionInfo!.ImageCount,
-            Gen = input.Gen == 0 ? inscriptionInfo.MaxGen : input.Gen
+            Gen = gen
         };
 
         State.AdoptInfoMap[adoptId] = adoptInfo;
@@ -759,5 +763,10 @@ public partial class SchrodingerContract
         Assert(IsStringValid(input!.Tick), "Invalid tick.");
         Assert(input.Amount > 0, "Invalid amount.");
         Assert(IsStringValid(input.Domain), "Invalid domain.");
+    }
+
+    private string GetInscriptionSymbol(string tick)
+    {
+        return tick + SchrodingerContractConstants.Separator + SchrodingerContractConstants.AncestorSymbolSuffix;
     }
 }
