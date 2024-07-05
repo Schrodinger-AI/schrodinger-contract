@@ -69,6 +69,9 @@ service SchrodingerContract {
 
   rpc TransferFromReceivingAddress (TransferFromReceivingAddressInput) returns (google.protobuf.Empty) {}
   rpc GetReceivingAddress (google.protobuf.StringValue) returns (aelf.Address) {option (aelf.is_view) = true;}
+
+  rpc SetOfficialDomainAlias (SetOfficialDomainAliasInput) returns (google.protobuf.Empty) {}
+  rpc GetOfficialDomainAlias (google.protobuf.Empty) returns (google.protobuf.StringValue) {option (aelf.is_view) = true;}
 }
 
 message JoinInput {
@@ -341,6 +344,10 @@ message TransferFromReceivingAddressInput {
   aelf.Address recipient = 3;
 }
 
+message SetOfficialDomainAliasInput {
+  string alias = 1;
+}
+
 // log event
 message Joined {
   option (aelf.is_event) = true;
@@ -524,4 +531,9 @@ message ReferralAccepted {
   option (aelf.is_event) = true;
   aelf.Address referrer = 1;
   aelf.Address invitee = 2;
+}
+
+message OfficialDomainAliasSet {
+  option (aelf.is_event) = true;
+  string alias = 1;
 }

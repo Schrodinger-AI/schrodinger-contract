@@ -125,11 +125,19 @@ public partial class SchrodingerContract
     }
 
     #endregion
-    
+
     public override Address GetReceivingAddress(StringValue input)
     {
         if (input == null || !IsStringValid(input.Value)) return new Address();
 
         return GetReceivingAddress(input.Value);
+    }
+
+    public override StringValue GetOfficialDomainAlias(Empty input)
+    {
+        return new StringValue
+        {
+            Value = State.OfficialDomainAlias.Value
+        };
     }
 }
