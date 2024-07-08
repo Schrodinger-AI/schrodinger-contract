@@ -222,33 +222,46 @@ public partial class SchrodingerContract
     {
         Assert(sourceTraitValues != null && sourceTraitValues.Data.Count > 0, "Invalid attribute trait values.");
         var uniqueSet = new HashSet<string>();
-        var traitValueMap = State.TraitValueMap[tick][traitTypeName] ?? new AttributeInfos();
-        var weightSums = new LongList();
-        traitValueMap.Data.Clear();
-        var data = traitValueMap.Data.ToList();
         var weight = 0L;
-        foreach (var sourceTraitValue in sourceTraitValues.Data)
+
+        var upperWeightSums = new LongList();
+        var lowerWeightSums = new LongList();
+        var traitValueList = new AttributeInfos();
+
+        for (var i = 0; i < sourceTraitValues.Data.Count; i++)
         {
-            Assert(uniqueSet.Add(sourceTraitValue.Name), $"Duplicate trait type {sourceTraitValue.Name}");
-            weight += sourceTraitValue.Weight;
-            weightSums.Data.Add(weight);
+            Assert(uniqueSet.Add(sourceTraitValues.Data[i].Name),
+                $"Duplicate trait type {sourceTraitValues.Data[i].Name}");
+            weight += sourceTraitValues.Data[i].Weight;
             var attributeMaxLength =
                 config?.AttributeMaxLength ?? SchrodingerContractConstants.DefaultAttributeMaxLength;
-            Assert(!string.IsNullOrWhiteSpace(sourceTraitValue.Name), "Invalid trait type name.");
-            Assert(sourceTraitValue.Name.Length <= attributeMaxLength, "Invalid trait type name length.");
+            Assert(!string.IsNullOrWhiteSpace(sourceTraitValues.Data[i].Name), "Invalid trait type name.");
+            Assert(sourceTraitValues.Data[i].Name.Length <= attributeMaxLength, "Invalid trait type name length.");
             Assert(
-                sourceTraitValue.Weight >= 0 &&
-                sourceTraitValue.Weight <= SchrodingerContractConstants.DefaultMaxWeight, "Invalid weight.");
-            data.Add(sourceTraitValue);
+                sourceTraitValues.Data[i].Weight >= 0 &&
+                sourceTraitValues.Data[i].Weight <= SchrodingerContractConstants.DefaultMaxWeight, "Invalid weight.");
+
+            lowerWeightSums.Data.Add(weight);
+            traitValueList.Data.Add(sourceTraitValues.Data[i]);
+
+            if (lowerWeightSums.Data.Count != SchrodingerContractConstants.Ten &&
+                i != sourceTraitValues.Data.Count - 1) continue;
+
+            State.TraitValuesMap[tick][traitTypeName][upperWeightSums.Data.Count] = new TraitValues
+            {
+                LowerWeightSums = new LongList { Data = { lowerWeightSums.Data } },
+                TraitValueList = new AttributeInfos { Data = { traitValueList.Data } }
+            };
+            upperWeightSums.Data.Add(weight);
+            lowerWeightSums.Data.Clear();
+            traitValueList.Data.Clear();
         }
 
+        State.UpperWeightSumsMap[tick][traitTypeName] = upperWeightSums;
+
         var maxTraitValueCount = config?.TraitValueMaxCount ?? SchrodingerContractConstants.DefaultTraitValueMaxCount;
-        var count = data.Count;
-        Assert(count > 0 && count <= maxTraitValueCount, "Invalid attribute trait values count.");
-        traitValueMap.Data.AddRange(data);
-        State.TraitValueMap[tick][traitTypeName] = traitValueMap;
+        Assert(uniqueSet.Count > 0 && uniqueSet.Count <= maxTraitValueCount, "Invalid attribute trait values count.");
         State.TraitValueTotalWeightsMap[tick][traitTypeName] = weight;
-        State.WeightSumsMap[tick][traitTypeName] = weightSums;
     }
 
     private InscriptionInfo CheckParamsAndGetInscription(SetAttributeInput input)
@@ -261,20 +274,24 @@ public partial class SchrodingerContract
         return inscription;
     }
 
-    private AttributeInfos UpdateAttributeSet(string tick, AttributeInfos traitTypes, AttributeInfos traitValues,
-        AttributeInfo toAddTraitType, AttributeInfos toAddTraitValues, out AttributeInfo toRemove)
+    private AttributeInfos UpdateAttributeSet(string tick, AttributeInfos traitTypes, AttributeInfo toAddTraitType,
+        AttributeInfos toAddTraitValues, out AttributeInfo toRemove)
     {
         toRemove = null;
         var config = State.Config?.Value;
         var traitTypeName = toAddTraitType.Name;
-        if (traitValues != null)
+        if (traitTypes.Data.Select(t => t.Name).Contains(traitTypeName))
         {
-            CheckTraitTypeExist(traitTypeName, traitTypes);
             // trait type exist
             if (toAddTraitValues == null || toAddTraitValues.Data.Count <= 0)
             {
                 // remove trait type
-                State.TraitValueMap[tick].Remove(traitTypeName);
+                for (var i = 0; i < State.UpperWeightSumsMap[tick][traitTypeName].Data.Count; i++)
+                {
+                    State.TraitValuesMap[tick][traitTypeName].Remove(i);
+                }
+
+                State.UpperWeightSumsMap[tick].Remove(traitTypeName);
                 foreach (var traitType in traitTypes.Data)
                 {
                     if (traitType.Name != traitTypeName) continue;

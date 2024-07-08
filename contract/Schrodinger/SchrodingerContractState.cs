@@ -15,10 +15,7 @@ public partial class SchrodingerContractState : ContractState
 
     // tick -> random attribute infos(greater than 1)
     public MappedState<string, AttributeInfos> RandomTraitTypeMap { get; set; }
-
-    // tick -> attribute type -> attribute infos
-    public MappedState<string, string, AttributeInfos> TraitValueMap { get; set; }
-
+    
     // tick -> inscription info
     public MappedState<string, InscriptionInfo> InscriptionInfoMap { get; set; }
 
@@ -49,7 +46,10 @@ public partial class SchrodingerContractState : ContractState
     public MappedState<string, long> PointsProportion { get; set; }
     public SingletonState<Address> PointsSettleAdmin { get; set; }
     
-    public MappedState<string, string, LongList> WeightSumsMap { get; set; }
+    // tick -> trait type -> upper weight sums
+    public MappedState<string, string, LongList> UpperWeightSumsMap { get; set; }
+    // tick -> trait type -> index -> trait values
+    public MappedState<string, string, int, TraitValues> TraitValuesMap { get; set; }
     
     public SingletonState<string> OfficialDomainAlias { get; set; }
 }

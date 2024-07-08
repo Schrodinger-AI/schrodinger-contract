@@ -541,7 +541,7 @@ public partial class SchrodingerContract
             BlockHeight = Context.CurrentHeight,
             Adopter = Context.Sender,
             ImageCount = inscriptionInfo!.ImageCount,
-            Gen = 2
+            Gen = inscriptionInfo.MaxGen
         };
 
         State.AdoptInfoMap[adoptId] = adoptInfo;
@@ -600,14 +600,17 @@ public partial class SchrodingerContract
 
     private string GetRandomItems(Hash randomHash, string traitType, string tick)
     {
-        var weightSums = State.WeightSumsMap[tick][traitType].Data;
-        var attributeInfos = State.TraitValueMap[tick][traitType].Data;
-        
-        var hash = HashHelper.ConcatAndCompute(randomHash, HashHelper.ComputeFrom(traitType));
-        var random = Context.ConvertHashToInt64(hash, 0, weightSums[^1]);
-        var index = BinarySearch(weightSums, random);
+        var upperWeightSums = State.UpperWeightSumsMap[tick][traitType].Data;
 
-        return attributeInfos[index].Name;
+        var hash = HashHelper.ConcatAndCompute(randomHash, HashHelper.ComputeFrom(traitType));
+        var random = Context.ConvertHashToInt64(hash, 0, State.TraitValueTotalWeightsMap[tick][traitType]);
+        var index = BinarySearch(upperWeightSums, random);
+
+        var traitValues = State.TraitValuesMap[tick][traitType][index];
+
+        index = BinarySearch(traitValues.LowerWeightSums.Data, random);
+
+        return traitValues.TraitValueList.Data[index].Name;
     }
 
     private int BinarySearch(RepeatedField<long> array, long value)
@@ -649,7 +652,7 @@ public partial class SchrodingerContract
 
         // select trait types randomly
         var randomTraitTypes = GetRandomItems(randomHash, nameof(GenerateAttributes),
-            randomAttributeInfo, amount, 0);
+            randomAttributeInfo.Clone(), amount, 0);
 
         // select trait values randomly
         foreach (var traitType in randomTraitTypes)
@@ -662,107 +665,6 @@ public partial class SchrodingerContract
         }
 
         return attributes;
-    }
-
-    public override Empty TestSetWeightSums(TestWeightSumsInput input)
-    {
-        State.RandomTraitTypeMap[input.Tick].Data.Remove(new AttributeInfo
-        {
-            Name = input.TraitType,
-            Weight = 0
-        });
-        return new Empty();
-    }
-
-    public override LongList TestGetWeightSums(TestWeightSumsInput input)
-    {
-        return State.WeightSumsMap[input.Tick][input.TraitType];
-    }
-
-    public override Int64Value TestGetTotalWeight(TestWeightSumsInput input)
-    {
-        return new Int64Value { Value = State.TraitValueMap[input.Tick][input.TraitType].Data.Count };
-    }
-
-    public override Empty TestAdoptMaxGen(TestAdoptMaxGenInput input)
-    {
-        ValidateTestAdoptMaxGenInput(input);
-
-        var inscriptionInfo = State.InscriptionInfoMap[input.Tick];
-        Assert(inscriptionInfo != null, "Tick not deployed.");
-
-        var symbolCount = State.SymbolCountMap[input.Tick];
-
-        var adoptId = GenerateAdoptId(input.Tick, symbolCount);
-        Assert(State.AdoptInfoMap[adoptId] == null, "Adopt id already exists.");
-
-        var parent = GetInscriptionSymbol(input.Tick);
-        var gen = input.Gen == 0 ? inscriptionInfo!.MaxGen : input.Gen;
-
-        var adoptInfo = new AdoptInfo
-        {
-            AdoptId = adoptId,
-            Parent = parent,
-            ParentGen = 0,
-            ParentAttributes = new Attributes(),
-            BlockHeight = Context.CurrentHeight,
-            Adopter = Context.Sender,
-            ImageCount = inscriptionInfo!.ImageCount,
-            Gen = gen
-        };
-
-        State.AdoptInfoMap[adoptId] = adoptInfo;
-
-        CalculateAmount(inscriptionInfo.MaxGenLossRate, inscriptionInfo.CommissionRate, input.Amount,
-            out var lossAmount, out var commissionAmount, out var outputAmount);
-
-        var minOutputAmount = new BigIntValue(SchrodingerContractConstants.Ten).Pow(inscriptionInfo.Decimals);
-        Assert(outputAmount >= minOutputAmount, "Input amount not enough.");
-
-        adoptInfo.InputAmount = input.Amount;
-        adoptInfo.OutputAmount = outputAmount;
-
-        ProcessAdoptTransfer(parent, input.Amount, lossAmount, commissionAmount, inscriptionInfo.Recipient,
-            inscriptionInfo.Ancestor, 0);
-
-        var randomHash = GetRandomHash(symbolCount);
-        adoptInfo.Attributes = GenerateMaxAttributes(input.Tick, adoptInfo.Gen.Sub(1), randomHash);
-        adoptInfo.Symbol = GenerateSymbol(input.Tick, symbolCount);
-        adoptInfo.TokenName = GenerateTokenName(adoptInfo.Symbol, adoptInfo.Gen);
-
-        State.SymbolCountMap[input.Tick] = symbolCount.Add(1);
-
-        JoinPointsContract(input.Domain);
-        SettlePoints(nameof(Adopt), adoptInfo.InputAmount, inscriptionInfo.Decimals);
-
-        Context.Fire(new Adopted
-        {
-            AdoptId = adoptId,
-            Parent = parent,
-            ParentGen = 0,
-            InputAmount = input.Amount,
-            LossAmount = lossAmount,
-            CommissionAmount = commissionAmount,
-            OutputAmount = outputAmount,
-            ImageCount = inscriptionInfo.ImageCount,
-            Adopter = Context.Sender,
-            BlockHeight = Context.CurrentHeight,
-            Attributes = adoptInfo.Attributes,
-            Gen = adoptInfo.Gen,
-            Ancestor = inscriptionInfo.Ancestor,
-            Symbol = adoptInfo.Symbol,
-            TokenName = adoptInfo.TokenName
-        });
-
-        return new Empty();
-    }
-
-    private void ValidateTestAdoptMaxGenInput(TestAdoptMaxGenInput input)
-    {
-        Assert(input != null, "Invalid input.");
-        Assert(IsStringValid(input!.Tick), "Invalid tick.");
-        Assert(input.Amount > 0, "Invalid amount.");
-        Assert(IsStringValid(input.Domain), "Invalid domain.");
     }
 
     private string GetInscriptionSymbol(string tick)

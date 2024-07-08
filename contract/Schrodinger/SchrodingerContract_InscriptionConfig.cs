@@ -13,13 +13,10 @@ public partial class SchrodingerContract
     {
         CheckParamsAndGetInscription(input);
         var inputTraitType = input.AttributeSet.TraitType;
-        var traitTypeName = inputTraitType.Name;
         var inputTraitValues = input.AttributeSet.Values;
 
         var traitTypes = State.FixedTraitTypeMap[input.Tick] ?? new AttributeInfos();
-        var traitValues = State.TraitValueMap[input.Tick][traitTypeName];
-        traitTypes = UpdateAttributeSet(input.Tick, traitTypes, traitValues, inputTraitType, inputTraitValues,
-            out var toRemove);
+        traitTypes = UpdateAttributeSet(input.Tick, traitTypes, inputTraitType, inputTraitValues, out var toRemove);
         var fixCount = CheckAndGetFixedAttributesCount<AttributeInfo>(traitTypes.Data.ToList());
         CheckTraitTypeCount(fixCount, State.RandomTraitTypeMap[input.Tick]?.Data.Count ?? 0);
         FireFixedAttributeSetLogEvent(toRemove, input.AttributeSet);
@@ -30,13 +27,10 @@ public partial class SchrodingerContract
     {
         var inscription = CheckParamsAndGetInscription(input);
         var inputTraitType = input.AttributeSet.TraitType;
-        var traitTypeName = inputTraitType.Name;
         var inputTraitValues = input.AttributeSet.Values;
 
         var traitTypes = State.RandomTraitTypeMap[input.Tick] ?? new AttributeInfos();
-        var traitValues = State.TraitValueMap[input.Tick][traitTypeName];
-        traitTypes = UpdateAttributeSet(input.Tick, traitTypes, traitValues, inputTraitType,
-            inputTraitValues, out var toRemove);
+        traitTypes = UpdateAttributeSet(input.Tick, traitTypes, inputTraitType, inputTraitValues, out var toRemove);
         var list = traitTypes.Data.ToList();
         var randomCount = CheckAndGetRandomAttributesCount<AttributeInfo>(list);
         CheckRandomAttributeList(list, inscription.MaxGen, inscription.AttributesPerGen);

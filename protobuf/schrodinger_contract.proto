@@ -73,20 +73,6 @@ service SchrodingerContract {
 
   rpc SetOfficialDomainAlias (SetOfficialDomainAliasInput) returns (google.protobuf.Empty) {}
   rpc GetOfficialDomainAlias (google.protobuf.Empty) returns (google.protobuf.StringValue) {option (aelf.is_view) = true;}
-
-  rpc TestAdoptMaxGen (TestAdoptMaxGenInput) returns (google.protobuf.Empty) {}
-  rpc TestSetWeightSums (TestWeightSumsInput) returns (google.protobuf.Empty) {}
-  rpc TestGetWeightSums (TestWeightSumsInput) returns (LongList) {option (aelf.is_view) = true;}
-  rpc TestGetTotalWeight (TestWeightSumsInput) returns (google.protobuf.Int64Value) {option (aelf.is_view) = true;}
-}
-
-message TestWeightSumsInput {
-  string tick = 1;
-  string trait_type = 2;
-}
-
-message LongList {
-  repeated int64 data = 1;
 }
 
 message JoinInput {
@@ -233,13 +219,6 @@ message AdoptMaxGenInput {
   string domain = 3;
 }
 
-message TestAdoptMaxGenInput {
-  string tick = 1;
-  int64 amount = 2;
-  string domain = 3;
-  int32 gen = 4;
-}
-
 message SetAttributeInput {
   string tick = 1;
   AttributeSet attribute_set = 2;
@@ -368,6 +347,15 @@ message TransferFromReceivingAddressInput {
   string tick = 1;
   int64 amount = 2;
   aelf.Address recipient = 3;
+}
+
+message TraitValues {
+  LongList lower_weight_sums = 1;
+  AttributeInfos trait_value_list = 2;
+}
+
+message LongList {
+  repeated int64 data = 1;
 }
 
 message SetOfficialDomainAliasInput {
