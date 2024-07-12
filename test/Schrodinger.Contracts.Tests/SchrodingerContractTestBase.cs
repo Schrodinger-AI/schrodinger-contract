@@ -27,12 +27,11 @@ public class SchrodingerContractTestBase : DAppContractTestBase<SchrodingerContr
 
     internal SchrodingerContractContainer.SchrodingerContractStub SchrodingerContractStub { get; set; }
     internal SchrodingerContractContainer.SchrodingerContractStub UserSchrodingerContractStub { get; set; }
-    internal SchrodingerContractContainer.SchrodingerContractStub User2SchrodingerContractStub { get; set; }
-
     internal TokenContractContainer.TokenContractStub TokenContractStub { get; set; }
     internal TokenContractContainer.TokenContractStub TokenContractUserStub { get; set; }
 
     internal SchrodingerMainContractContainer.SchrodingerMainContractStub SchrodingerMainContractStub { get; set; }
+    internal SchrodingerMainContractContainer.SchrodingerMainContractStub UserSchrodingerMainContractStub { get; set; }
 
     protected ECKeyPair DefaultKeyPair => Accounts[0].KeyPair;
     protected Address DefaultAddress => Accounts[0].Address;
@@ -70,6 +69,8 @@ public class SchrodingerContractTestBase : DAppContractTestBase<SchrodingerContr
         SchrodingerMainContractAddress = Address.Parser.ParseFrom(result.TransactionResult.ReturnValue);
         SchrodingerMainContractStub = GetContractStub<SchrodingerMainContractContainer.SchrodingerMainContractStub>(
             SchrodingerMainContractAddress, DefaultKeyPair);
+        UserSchrodingerMainContractStub = GetContractStub<SchrodingerMainContractContainer.SchrodingerMainContractStub>(
+            SchrodingerMainContractAddress, UserKeyPair);
         
         code = File.ReadAllBytes(typeof(SchrodingerContract).Assembly.Location);
         contractOperation = new ContractOperation
@@ -97,9 +98,6 @@ public class SchrodingerContractTestBase : DAppContractTestBase<SchrodingerContr
         UserSchrodingerContractStub =
             GetContractStub<SchrodingerContractContainer.SchrodingerContractStub>(SchrodingerContractAddress,
                 UserKeyPair);
-        User2SchrodingerContractStub =
-            GetContractStub<SchrodingerContractContainer.SchrodingerContractStub>(SchrodingerContractAddress,
-                User2KeyPair);
 
         TokenContractStub =
             GetContractStub<TokenContractContainer.TokenContractStub>(TokenContractAddress, DefaultKeyPair);

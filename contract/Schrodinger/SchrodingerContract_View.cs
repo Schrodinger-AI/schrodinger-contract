@@ -96,7 +96,14 @@ public partial class SchrodingerContract
             return result;
         }
 
-        result = State.TraitValueMap[tick][traitType] ?? new AttributeInfos();
+        var upperWeightSums = State.UpperWeightSumsMap[tick][traitType];
+        
+        if (upperWeightSums == null) return result;
+        
+        for (var i = 0; i < upperWeightSums.Data.Count; i++)
+        {
+            result.Data.AddRange(State.TraitValuesMap[tick][traitType][i].TraitValueList.Data);
+        }
         return result;
     }
 

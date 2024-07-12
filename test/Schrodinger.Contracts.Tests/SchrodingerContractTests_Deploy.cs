@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Contracts.MultiToken;
+using AElf.Types;
 using Google.Protobuf.WellKnownTypes;
 using Shouldly;
 using Xunit;
@@ -115,7 +116,8 @@ public partial class SchrodingerContractTests
                 CrossGenerationFixed = false
             },
             Signatory = DefaultAddress,
-            ImageUri = "uri"
+            ImageUri = "uri",
+            MaxGenLossRate = 5000
         });
         var log = GetLogEvent<Deployed>(result.TransactionResult);
         var inscription = await SchrodingerContractStub.GetInscriptionInfo.CallAsync(new StringValue
@@ -126,6 +128,7 @@ public partial class SchrodingerContractTests
         inscription.MaxGen.ShouldBe(4);
         inscription.CommissionRate.ShouldBe(1000);
         inscription.LossRate.ShouldBe(500);
+        inscription.MaxGenLossRate.ShouldBe(5000);
         inscription.IsWeightEnabled.ShouldBe(true);
         var attributeList = await SchrodingerContractStub.GetAttributeTypes.CallAsync(new StringValue
         {
@@ -160,7 +163,7 @@ public partial class SchrodingerContractTests
         attributeValues.Data[1].Weight.ShouldBe(10);
         attributeValues.Data[2].Name.ShouldBe("Medium");
         attributeValues.Data[2].Weight.ShouldBe(9);
-        
+
         attributeList.Data[2].Name.ShouldBe("Clothes");
         attributeList.Data[2].Weight.ShouldBe(200);
         attributeValues = await SchrodingerContractStub.GetAttributeValues.CallAsync(new GetAttributeValuesInput
@@ -175,8 +178,8 @@ public partial class SchrodingerContractTests
         attributeValues.Data[1].Weight.ShouldBe(127);
         attributeValues.Data[2].Name.ShouldBe("Student");
         attributeValues.Data[2].Weight.ShouldBe(127);
-        
-        attributeList.Data[3].Name.ShouldBe("Hat"); 
+
+        attributeList.Data[3].Name.ShouldBe("Hat");
         attributeList.Data[3].Weight.ShouldBe(170);
         attributeValues = await SchrodingerContractStub.GetAttributeValues.CallAsync(new GetAttributeValuesInput
         {
@@ -190,7 +193,7 @@ public partial class SchrodingerContractTests
         attributeValues.Data[1].Weight.ShouldBe(38);
         attributeValues.Data[2].Name.ShouldBe("Crown");
         attributeValues.Data[2].Weight.ShouldBe(100);
-        
+
         attributeList.Data[4].Name.ShouldBe("Mouth");
         attributeList.Data[4].Weight.ShouldBe(200);
         attributeValues = await SchrodingerContractStub.GetAttributeValues.CallAsync(new GetAttributeValuesInput
@@ -220,7 +223,7 @@ public partial class SchrodingerContractTests
         attributeValues.Data[1].Weight.ShouldBe(10);
         attributeValues.Data[2].Name.ShouldBe("Star");
         attributeValues.Data[2].Weight.ShouldBe(199);
-        
+
         attributeList.Data[6].Name.ShouldBe("Face");
         attributeList.Data[6].Weight.ShouldBe(450);
         attributeValues = await SchrodingerContractStub.GetAttributeValues.CallAsync(new GetAttributeValuesInput
@@ -235,7 +238,6 @@ public partial class SchrodingerContractTests
         attributeValues.Data[1].Weight.ShouldBe(120);
         attributeValues.Data[2].Name.ShouldBe("Angry");
         attributeValues.Data[2].Weight.ShouldBe(66);
-        
     }
 
     [Fact]
@@ -267,7 +269,7 @@ public partial class SchrodingerContractTests
         values.Data[1].Weight.ShouldBe(95);
         values.Data[2].Name.ShouldBe("Zombie");
         values.Data[2].Weight.ShouldBe(95);
-        
+
 
         var log = GetLogEvent<FixedAttributeSet>(result.TransactionResult);
         log.AddedAttribute.TraitType.Name.ShouldBe("Breed");
@@ -431,4 +433,232 @@ public partial class SchrodingerContractTests
     //     attributeList.RandomAttributes[2].Values.Data[2].Name.ShouldBe("Brogues");
     //     attributeList.RandomAttributes[2].Values.Data[2].Weight.ShouldBe(60);
     // }
+
+    [Fact]
+    public async Task SetAttributesTests_Duplicate_Fail()
+    {
+        await DeployTest();
+
+        var attributeSet = new AttributeSet
+        {
+            TraitType = new AttributeInfo
+            {
+                Name = "test",
+                Weight = 100
+            },
+            Values = new AttributeInfos
+            {
+                Data =
+                {
+                    new AttributeInfo
+                    {
+                        Name = "v1",
+                        Weight = 10
+                    },
+                    new AttributeInfo
+                    {
+                        Name = "v1",
+                        Weight = 20
+                    }
+                }
+            }
+        };
+
+        var result = await SchrodingerContractStub.SetFixedAttribute.SendWithExceptionAsync(new SetAttributeInput
+        {
+            Tick = _tick,
+            AttributeSet = attributeSet
+        });
+        result.TransactionResult.Error.ShouldContain("Duplicate trait type v1");
+        
+        result = await SchrodingerContractStub.SetRandomAttribute.SendWithExceptionAsync(new SetAttributeInput
+        {
+            Tick = _tick,
+            AttributeSet = attributeSet
+        });
+        result.TransactionResult.Error.ShouldContain("Duplicate trait type v1");
+    }
+
+    [Fact]
+    public async Task SetRatesTests()
+    {
+        await DeployTest();
+
+        var output = await SchrodingerContractStub.GetInscriptionInfo.CallAsync(new StringValue
+        {
+            Value = _tick
+        });
+        output.LossRate.ShouldBe(500);
+        output.CommissionRate.ShouldBe(1000);
+        output.MaxGenLossRate.ShouldBe(5000);
+
+        var result = await SchrodingerContractStub.SetRates.SendAsync(new SetRatesInput
+        {
+            Tick = _tick,
+            LossRate = 5000,
+            CommissionRate = 5000,
+            MaxGenLossRate = 6000
+        });
+        result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
+
+        var log = GetLogEvent<RatesSet>(result.TransactionResult);
+        log.Tick.ShouldBe(_tick);
+        log.LossRate.ShouldBe(5000);
+        log.CommissionRate.ShouldBe(5000);
+        log.MaxGenLossRate.ShouldBe(6000);
+        
+        output = await SchrodingerContractStub.GetInscriptionInfo.CallAsync(new StringValue
+        {
+            Value = _tick
+        });
+        output.LossRate.ShouldBe(5000);
+        output.CommissionRate.ShouldBe(5000);
+        output.MaxGenLossRate.ShouldBe(6000);
+        
+        result = await SchrodingerContractStub.SetRates.SendAsync(new SetRatesInput
+        {
+            Tick = _tick,
+            LossRate = 5000,
+            CommissionRate = 5000
+        });
+        result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
+        
+        log = GetLogEvent<RatesSet>(result.TransactionResult);
+        log.MaxGenLossRate.ShouldBe(0);
+        
+        output = await SchrodingerContractStub.GetInscriptionInfo.CallAsync(new StringValue
+        {
+            Value = _tick
+        });
+        output.MaxGenLossRate.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task SetRatesTests_Fail_MaxGenLossRate()
+    {
+        await DeployTest();
+        
+        var result = await SchrodingerContractStub.SetRates.SendWithExceptionAsync(new SetRatesInput
+        {
+            Tick = _tick,
+            MaxGenLossRate = -1
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid max gen loss rate.");
+    }
+
+    [Fact]
+    public async Task DeployTests_MaxGenLossRate()
+    {
+        await DeployCollectionTest();
+        await Initialize();
+        var result = await SchrodingerContractStub.Deploy.SendAsync(new DeployInput()
+        {
+            Tick = _tick,
+            AttributesPerGen = 1,
+            MaxGeneration = 4,
+            ImageCount = 2,
+            Decimals = 0,
+            CommissionRate = 1000,
+            LossRate = 500,
+            AttributeLists = GetAttributeLists(),
+            Image = _image,
+            IsWeightEnabled = true,
+            TotalSupply = 21000000,
+            CrossGenerationConfig = new CrossGenerationConfig
+            {
+                Gen = 2,
+                CrossGenerationProbability = 10000,
+                IsWeightEnabled = true,
+                Weights = { 10, 10 },
+                CrossGenerationFixed = false
+            },
+            Signatory = DefaultAddress,
+            ImageUri = "uri",
+            MaxGenLossRate = 1000
+        });
+        result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
+
+        var log = GetLogEvent<Deployed>(result.TransactionResult);
+        log.MaxGenLossRate.ShouldBe(1000);
+
+        var output = await SchrodingerContractStub.GetInscriptionInfo.CallAsync(new StringValue
+        {
+            Value = _tick
+        });
+        output.MaxGenLossRate.ShouldBe(1000);
+    }
+    
+    [Fact]
+    public async Task DeployTests_MaxGenLossRateEmpty()
+    {
+        await DeployCollectionTest();
+        await Initialize();
+        var result = await SchrodingerContractStub.Deploy.SendAsync(new DeployInput()
+        {
+            Tick = _tick,
+            AttributesPerGen = 1,
+            MaxGeneration = 4,
+            ImageCount = 2,
+            Decimals = 0,
+            CommissionRate = 1000,
+            LossRate = 500,
+            AttributeLists = GetAttributeLists(),
+            Image = _image,
+            IsWeightEnabled = true,
+            TotalSupply = 21000000,
+            CrossGenerationConfig = new CrossGenerationConfig
+            {
+                Gen = 2,
+                CrossGenerationProbability = 10000,
+                IsWeightEnabled = true,
+                Weights = { 10, 10 },
+                CrossGenerationFixed = false
+            },
+            Signatory = DefaultAddress,
+            ImageUri = "uri"
+        });
+        result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
+
+        var log = GetLogEvent<Deployed>(result.TransactionResult);
+        log.MaxGenLossRate.ShouldBe(0);
+
+        var output = await SchrodingerContractStub.GetInscriptionInfo.CallAsync(new StringValue
+        {
+            Value = _tick
+        });
+        output.MaxGenLossRate.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task DeployTests_Fail_MaxGenLossRate()
+    {
+        await DeployCollectionTest();
+        await Initialize();
+        var result = await SchrodingerContractStub.Deploy.SendWithExceptionAsync(new DeployInput()
+        {
+            Tick = _tick,
+            AttributesPerGen = 1,
+            MaxGeneration = 4,
+            ImageCount = 2,
+            Decimals = 0,
+            CommissionRate = 1000,
+            LossRate = 500,
+            AttributeLists = GetAttributeLists(),
+            Image = _image,
+            IsWeightEnabled = true,
+            TotalSupply = 21000000,
+            CrossGenerationConfig = new CrossGenerationConfig
+            {
+                Gen = 2,
+                CrossGenerationProbability = 10000,
+                IsWeightEnabled = true,
+                Weights = { 10, 10 },
+                CrossGenerationFixed = false
+            },
+            Signatory = DefaultAddress,
+            ImageUri = "uri",
+            MaxGenLossRate = -1
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid max gen loss rate.");
+    }
 }

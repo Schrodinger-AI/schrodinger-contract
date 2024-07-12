@@ -23,7 +23,8 @@ public partial class SchrodingerContract
             CrossGenerationConfig = input.CrossGenerationConfig,
             IsWeightEnabled = input.IsWeightEnabled,
             ImageCount = input.ImageCount,
-            AttributesPerGen = input.AttributesPerGen
+            AttributesPerGen = input.AttributesPerGen,
+            MaxGenLossRate = input.MaxGenLossRate
         };
         State.InscriptionInfoMap[tick] = inscription;
         State.SignatoryMap[tick] = input.Signatory;
@@ -61,7 +62,8 @@ public partial class SchrodingerContract
             CommissionRate = inscription.CommissionRate,
             AttributesPerGen = input.AttributesPerGen,
             ImageUri = input.ImageUri,
-            Signatory = input.Signatory
+            Signatory = input.Signatory,
+            MaxGenLossRate = inscription.MaxGenLossRate
         });
         return new Empty();
     }
