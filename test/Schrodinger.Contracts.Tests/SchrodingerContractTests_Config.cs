@@ -143,5 +143,17 @@ public partial class SchrodingerContractTests
             Tick = _tick,
             Admin = UserAddress
         });
+
+        await SchrodingerMainContractStub.SetImageMaxSize.SendAsync(new Int64Value
+        {
+            Value = 100
+        });
+        SchrodingerMainContractStub.GetImageMaxSize.CallAsync(new Empty()).Result.Value.ShouldBe(100);
+        
+        await SchrodingerMainContractStub.SetSchrodingerContractAddress.SendAsync(UserAddress);
+        SchrodingerMainContractStub.GetSchrodingerContractAddress.CallAsync(new Empty()).Result.ShouldBe(UserAddress);
+        
+        await SchrodingerMainContractStub.SetAdmin.SendAsync(UserAddress);
+        SchrodingerMainContractStub.GetAdmin.CallAsync(new Empty()).Result.ShouldBe(UserAddress);
     }
 }
