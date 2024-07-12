@@ -5,6 +5,7 @@ using AElf;
 using AElf.Contracts.MultiToken;
 using AElf.Cryptography;
 using AElf.CSharp.Core;
+using AElf.CSharp.Core.Extension;
 using AElf.Types;
 using Google.Protobuf;
 using Shouldly;
@@ -62,7 +63,7 @@ public partial class SchrodingerContractTests
         });
 
         var seedOwnedSymbol = "SGR" + "-0";
-        var seedExpTime = "1720590467";
+        var seedExpTime = BlockTimeProvider.GetBlockTime().AddDays(1);
         await TokenContractStub.Create.SendAsync(new CreateInput
         {
             Symbol = "SEED-1",
@@ -83,7 +84,7 @@ public partial class SchrodingerContractTests
                     },
                     {
                         "__seed_exp_time",
-                        seedExpTime
+                        seedExpTime.Seconds.ToString()
                     }
                 }
             }
