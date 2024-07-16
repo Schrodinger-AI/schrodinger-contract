@@ -64,7 +64,7 @@ public partial class SchrodingerContract
         State.SymbolCountMap[tick] = symbolCount.Add(1);
 
         JoinPointsContract(input.Domain);
-        SettlePoints(nameof(Adopt), adoptInfo.InputAmount, inscriptionInfo.Decimals);
+        SettlePoints(nameof(Adopt), adoptInfo.InputAmount, inscriptionInfo.Decimals, nameof(Adopt));
 
         Context.Fire(new Adopted
         {
@@ -506,7 +506,7 @@ public partial class SchrodingerContract
         ProcessRerollTransfer(input.Symbol, input.Amount, inscriptionInfo.Ancestor);
 
         JoinPointsContract(input.Domain);
-        SettlePoints(nameof(Reroll), input.Amount, inscriptionInfo.Decimals);
+        SettlePoints(nameof(Reroll), input.Amount, inscriptionInfo.Decimals, nameof(Reroll));
 
         Context.Fire(new Rerolled
         {
@@ -566,7 +566,8 @@ public partial class SchrodingerContract
         State.SymbolCountMap[input.Tick] = symbolCount.Add(1);
 
         JoinPointsContract(input.Domain);
-        SettlePoints(nameof(Adopt), adoptInfo.InputAmount, inscriptionInfo.Decimals);
+        // AdoptMaxGen has the same type of point with Adopt
+        SettlePoints(nameof(Adopt), adoptInfo.InputAmount, inscriptionInfo.Decimals, nameof(AdoptMaxGen));
 
         Context.Fire(new Adopted
         {
