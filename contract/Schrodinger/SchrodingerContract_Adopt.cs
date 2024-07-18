@@ -371,6 +371,7 @@ public partial class SchrodingerContract
         Assert(adoptInfo!.Adopter == Context.Sender, "No permission.");
 
         Assert(!adoptInfo.IsConfirmed, "Adopt id already confirmed.");
+        Assert(!adoptInfo.IsRerolled, "Adopt id already rerolled.");
 
         adoptInfo.IsConfirmed = true;
         State.SymbolAdoptIdMap[adoptInfo.Symbol] = adoptInfo.AdoptId;
@@ -680,6 +681,7 @@ public partial class SchrodingerContract
         var adoptInfo = State.AdoptInfoMap[input];
         Assert(adoptInfo != null, "Adopt id not exists.");
         Assert(adoptInfo!.Adopter == Context.Sender, "No permission.");
+        Assert(!adoptInfo.IsRerolled, "Already rerolled.");
         Assert(!adoptInfo.IsConfirmed, "Already confirmed.");
         
         var tick = GetTickFromSymbol(adoptInfo.Symbol);
@@ -691,8 +693,8 @@ public partial class SchrodingerContract
             To = Context.Sender,
             Symbol = inscriptionInfo.Ancestor
         });
-        
-        State.AdoptInfoMap.Remove(input);
+
+        adoptInfo.IsRerolled = true;
         
         SettlePoints(nameof(Reroll), adoptInfo.OutputAmount, inscriptionInfo.Decimals, nameof(Reroll));
         
