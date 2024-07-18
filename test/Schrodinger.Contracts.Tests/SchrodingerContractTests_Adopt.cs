@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using AElf;
 using AElf.Contracts.MultiToken;
 using AElf.Types;
 using Google.Protobuf.WellKnownTypes;
@@ -315,6 +316,103 @@ public partial class SchrodingerContractTests
             Domain = "test"
         });
         result.TransactionResult.Error.ShouldContain("Input amount not enough.");
+    }
+
+    [Fact]
+    public async Task RerollAdoptionTests()
+    {
+        await DeployForMaxGen();
+
+        await TokenContractStub.Issue.SendAsync(new IssueInput
+        {
+            Symbol = Gen0,
+            Amount = 2_00000000,
+            To = UserAddress
+        });
+
+        await TokenContractUserStub.Approve.SendAsync(new ApproveInput
+        {
+            Symbol = Gen0,
+            Amount = 2_00000000,
+            Spender = SchrodingerContractAddress
+        });
+
+        var balance = await GetTokenBalance(Gen0, UserAddress);
+        balance.ShouldBe(2_00000000);
+
+        var result = await UserSchrodingerContractStub.Adopt.SendAsync(new AdoptInput
+        {
+            Parent = Gen0,
+            Amount = 2_00000000,
+            Domain = "test"
+        });
+        var adoptId = GetLogEvent<Adopted>(result.TransactionResult).AdoptId;
+        
+        balance = await GetTokenBalance(Gen0, UserAddress);
+        balance.ShouldBe(0);
+
+        var adoptInfo = await UserSchrodingerContractStub.GetAdoptInfo.CallAsync(adoptId);
+        
+        result = await UserSchrodingerContractStub.RerollAdoption.SendAsync(adoptId);
+        var log = GetLogEvent<AdoptionRerolled>(result.TransactionResult);
+        
+        log.AdoptId.ShouldBe(adoptId);
+        log.Symbol.ShouldBe(Gen0);
+        log.Amount.ShouldBe(adoptInfo.OutputAmount);
+        
+        adoptInfo = await UserSchrodingerContractStub.GetAdoptInfo.CallAsync(adoptId);
+        adoptInfo.AdoptId.ShouldBeNull();
+        
+        balance = await GetTokenBalance(Gen0, UserAddress);
+        balance.ShouldBe(log.Amount);
+    }
+
+    [Fact]
+    public async Task RerollAdoptionTests_Fail()
+    {
+        await DeployForMaxGen();
+
+        await TokenContractStub.Issue.SendAsync(new IssueInput
+        {
+            Symbol = Gen0,
+            Amount = 2_00000000,
+            To = UserAddress
+        });
+
+        await TokenContractUserStub.Approve.SendAsync(new ApproveInput
+        {
+            Symbol = Gen0,
+            Amount = 2_00000000,
+            Spender = SchrodingerContractAddress
+        });
+        
+        var result = await UserSchrodingerContractStub.Adopt.SendAsync(new AdoptInput
+        {
+            Parent = Gen0,
+            Amount = 2_00000000,
+            Domain = "test"
+        });
+        var adoptId = GetLogEvent<Adopted>(result.TransactionResult).AdoptId;
+        
+        result = await UserSchrodingerContractStub.RerollAdoption.SendWithExceptionAsync(new Hash());
+        result.TransactionResult.Error.ShouldContain("Invalid input.");
+        
+        result = await UserSchrodingerContractStub.RerollAdoption.SendWithExceptionAsync(HashHelper.ComputeFrom("test"));
+        result.TransactionResult.Error.ShouldContain("Adopt id not exists.");
+        
+        result = await SchrodingerContractStub.RerollAdoption.SendWithExceptionAsync(adoptId);
+        result.TransactionResult.Error.ShouldContain("No permission.");
+
+        await UserSchrodingerContractStub.Confirm.SendAsync(new ConfirmInput
+        {
+            AdoptId = adoptId,
+            Image = "image",
+            ImageUri = "uri",
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, adoptId, "image", "uri")
+        });
+        
+        result = await SchrodingerContractStub.RerollAdoption.SendWithExceptionAsync(adoptId);
+        result.TransactionResult.Error.ShouldContain("No permission.");
     }
 
     private async Task DeployForMaxGen()

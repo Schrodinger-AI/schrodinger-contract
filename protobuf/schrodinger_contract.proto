@@ -20,6 +20,7 @@ service SchrodingerContract {
   rpc Confirm (ConfirmInput) returns (google.protobuf.Empty) {}
   rpc Reroll (RerollInput) returns (google.protobuf.Empty) {}
   rpc AdoptMaxGen (AdoptMaxGenInput) returns (google.protobuf.Empty) {}
+  rpc RerollAdoption (aelf.Hash) returns (google.protobuf.Empty) {}
 
   // token
   rpc SetFixedAttribute (SetAttributeInput) returns (google.protobuf.Empty) {}
@@ -552,4 +553,11 @@ message ReferralAccepted {
 message OfficialDomainAliasSet {
   option (aelf.is_event) = true;
   string alias = 1;
+}
+
+message AdoptionRerolled {
+  option (aelf.is_event) = true;
+  aelf.Hash adopt_id = 1;
+  string symbol = 2;
+  int64 amount = 3;
 }

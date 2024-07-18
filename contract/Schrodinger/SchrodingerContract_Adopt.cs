@@ -672,4 +672,37 @@ public partial class SchrodingerContract
     {
         return tick + SchrodingerContractConstants.Separator + SchrodingerContractConstants.AncestorSymbolSuffix;
     }
+
+    public override Empty RerollAdoption(Hash input)
+    {
+        Assert(IsHashValid(input), "Invalid input.");
+        
+        var adoptInfo = State.AdoptInfoMap[input];
+        Assert(adoptInfo != null, "Adopt id not exists.");
+        Assert(adoptInfo!.Adopter == Context.Sender, "No permission.");
+        Assert(!adoptInfo.IsConfirmed, "Already confirmed.");
+        
+        var tick = GetTickFromSymbol(adoptInfo.Symbol);
+        var inscriptionInfo = State.InscriptionInfoMap[tick];
+        
+        State.TokenContract.Transfer.Send(new TransferInput
+        {
+            Amount = adoptInfo.OutputAmount,
+            To = Context.Sender,
+            Symbol = inscriptionInfo.Ancestor
+        });
+        
+        State.AdoptInfoMap.Remove(input);
+        
+        SettlePoints(nameof(Reroll), adoptInfo.OutputAmount, inscriptionInfo.Decimals, nameof(Reroll));
+        
+        Context.Fire(new AdoptionRerolled
+        {
+            AdoptId = input,
+            Amount = adoptInfo.OutputAmount,
+            Symbol = adoptInfo.Parent
+        });
+        
+        return new Empty();
+    }
 }
