@@ -52,4 +52,7 @@ public partial class SchrodingerContractState : ContractState
     public MappedState<string, string, int, TraitValues> TraitValuesMap { get; set; }
     
     public SingletonState<string> OfficialDomainAlias { get; set; }
+    
+    // tick -> user address -> adoptMaxGen operation count
+    public MappedState<string, Address, long> UserAdoptMaxGenCount { get; set; }
 }

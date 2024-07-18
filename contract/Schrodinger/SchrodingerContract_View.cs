@@ -147,4 +147,21 @@ public partial class SchrodingerContract
             Value = State.OfficialDomainAlias.Value
         };
     }
+
+    public override GetUserOperationStatusOutput GetUserOperationStatus(GetUserOperationStatusInput input)
+    {
+        if (!IsStringValid(input.Tick) || !IsAddressValid(input.Account)) return new GetUserOperationStatusOutput();
+
+        var inscriptionInfo = State.InscriptionInfoMap[input.Tick];
+
+        if (!IsStringValid(inscriptionInfo?.Ancestor)) return new GetUserOperationStatusOutput();
+
+        var count = State.UserAdoptMaxGenCount[input.Tick][input.Account];
+        
+        return new GetUserOperationStatusOutput
+        {
+            OperationCount = count,
+            RewardThreshold = inscriptionInfo!.RewardThreshold
+        };
+    }
 }

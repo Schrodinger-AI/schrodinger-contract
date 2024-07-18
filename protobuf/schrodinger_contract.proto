@@ -41,6 +41,8 @@ service SchrodingerContract {
   rpc GetAttributeValues (GetAttributeValuesInput) returns (AttributeInfos) {option (aelf.is_view) = true;}
   rpc GetAdoptInfo (aelf.Hash) returns (AdoptInfo) {option (aelf.is_view) = true;}
   rpc GetTokenInfo (google.protobuf.StringValue) returns (GetTokenInfoOutput) {option (aelf.is_view) = true;}
+  rpc SetRewardThreshold (SetRewardThresholdInput) returns (google.protobuf.Empty) {}
+  rpc GetUserOperationStatus (GetUserOperationStatusInput) returns (GetUserOperationStatusOutput) {option (aelf.is_view) = true;}
 
   // contract
   rpc SetConfig (Config) returns (google.protobuf.Empty) {}
@@ -304,6 +306,7 @@ message InscriptionInfo {
   int32 image_count = 10;
   int32 attributes_per_gen = 11;
   int64 max_gen_loss_rate = 12;
+  int64 reward_threshold = 13;     // trigger reward mechanism when adoptMaxGen reaches reward threshold
 }
 
 message GetTokenInfoOutput {
@@ -361,6 +364,21 @@ message LongList {
 
 message SetOfficialDomainAliasInput {
   string alias = 1;
+}
+
+message SetRewardThresholdInput {
+  string tick = 1;
+  int64 reward_threshold = 2;
+}
+
+message GetUserOperationStatusInput {
+  string tick = 1;
+  aelf.Address account = 2;
+}
+
+message GetUserOperationStatusOutput {
+  int64 reward_threshold = 1;
+  int64 operation_count = 2;
 }
 
 // log event
@@ -560,4 +578,10 @@ message AdoptionRerolled {
   aelf.Hash adopt_id = 1;
   string symbol = 2;
   int64 amount = 3;
+}
+
+message RewardThresholdSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  int64 reward_threshold = 2;
 }
