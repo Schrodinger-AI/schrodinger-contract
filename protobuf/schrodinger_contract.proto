@@ -561,4 +561,5 @@ message AdoptionRerolled {
   aelf.Hash adopt_id = 1;
   string symbol = 2;
   int64 amount = 3;
+  aelf.Address account = 4;
 }

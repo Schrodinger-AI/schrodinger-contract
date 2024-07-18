@@ -360,6 +360,7 @@ public partial class SchrodingerContractTests
         log.AdoptId.ShouldBe(adoptId);
         log.Symbol.ShouldBe(Gen0);
         log.Amount.ShouldBe(adoptInfo.OutputAmount);
+        log.Account.ShouldBe(UserAddress);
         
         adoptInfo = await UserSchrodingerContractStub.GetAdoptInfo.CallAsync(adoptId);
         adoptInfo.IsRerolled.ShouldBeTrue();

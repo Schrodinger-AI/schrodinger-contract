@@ -702,7 +702,8 @@ public partial class SchrodingerContract
         {
             AdoptId = input,
             Amount = adoptInfo.OutputAmount,
-            Symbol = adoptInfo.Parent
+            Symbol = inscriptionInfo.Ancestor,
+            Account = Context.Sender
         });
         
         return new Empty();
