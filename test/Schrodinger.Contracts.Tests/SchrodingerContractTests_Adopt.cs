@@ -352,6 +352,7 @@ public partial class SchrodingerContractTests
         balance.ShouldBe(0);
 
         var adoptInfo = await UserSchrodingerContractStub.GetAdoptInfo.CallAsync(adoptId);
+        adoptInfo.IsRerolled.ShouldBeFalse();
         
         result = await UserSchrodingerContractStub.RerollAdoption.SendAsync(adoptId);
         var log = GetLogEvent<AdoptionRerolled>(result.TransactionResult);
@@ -361,7 +362,7 @@ public partial class SchrodingerContractTests
         log.Amount.ShouldBe(adoptInfo.OutputAmount);
         
         adoptInfo = await UserSchrodingerContractStub.GetAdoptInfo.CallAsync(adoptId);
-        adoptInfo.AdoptId.ShouldBeNull();
+        adoptInfo.IsRerolled.ShouldBeTrue();
         
         balance = await GetTokenBalance(Gen0, UserAddress);
         balance.ShouldBe(log.Amount);
@@ -375,14 +376,14 @@ public partial class SchrodingerContractTests
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 6_00000000,
             To = UserAddress
         });
 
         await TokenContractUserStub.Approve.SendAsync(new ApproveInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 6_00000000,
             Spender = SchrodingerContractAddress
         });
         
@@ -411,10 +412,42 @@ public partial class SchrodingerContractTests
             Signature = GenerateSignature(DefaultKeyPair.PrivateKey, adoptId, "image", "uri")
         });
         
-        result = await SchrodingerContractStub.RerollAdoption.SendWithExceptionAsync(adoptId);
-        result.TransactionResult.Error.ShouldContain("No permission.");
+        result = await UserSchrodingerContractStub.RerollAdoption.SendWithExceptionAsync(adoptId);
+        result.TransactionResult.Error.ShouldContain("Already confirmed.");
+        
+        result = await UserSchrodingerContractStub.Adopt.SendAsync(new AdoptInput
+        {
+            Parent = Gen0,
+            Amount = 2_00000000,
+            Domain = "test"
+        });
+        adoptId = GetLogEvent<Adopted>(result.TransactionResult).AdoptId;
+        
+        await UserSchrodingerContractStub.RerollAdoption.SendAsync(adoptId);
+        
+        result = await UserSchrodingerContractStub.RerollAdoption.SendWithExceptionAsync(adoptId);
+        result.TransactionResult.Error.ShouldContain("Already rerolled.");
+        
+        result = await UserSchrodingerContractStub.Adopt.SendAsync(new AdoptInput
+        {
+            Parent = Gen0,
+            Amount = 2_00000000,
+            Domain = "test"
+        });
+        adoptId = GetLogEvent<Adopted>(result.TransactionResult).AdoptId;
+        
+        await UserSchrodingerContractStub.RerollAdoption.SendAsync(adoptId);
+        
+        result = await UserSchrodingerContractStub.Confirm.SendWithExceptionAsync(new ConfirmInput
+        {
+            AdoptId = adoptId,
+            Image = "image",
+            ImageUri = "uri",
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, adoptId, "image", "uri")
+        });
+        result.TransactionResult.Error.ShouldContain("Already rerolled.");
     }
-
+    
     private async Task DeployForMaxGen()
     {
         await DeployCollectionTest();

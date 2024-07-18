@@ -192,6 +192,7 @@ message AdoptInfo {
   int32 gen = 12;                     // generated gen
   aelf.Address adopter = 13;          // sender
   bool is_confirmed = 14;
+  bool is_rerolled = 15;
 }
 
 message Attributes {
