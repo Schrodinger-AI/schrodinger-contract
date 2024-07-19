@@ -58,9 +58,9 @@ public partial class SchrodingerContract
         });
     }
 
-    private void SettlePoints(string actionName, long amount, int inscriptionDecimal)
+    private void SettlePoints(string actionName, long amount, int inscriptionDecimal, string proportionActionName)
     {
-        var proportion = GetProportion(actionName);
+        var proportion = GetProportion(proportionActionName);
 
         var points = new BigIntValue(amount).Mul(new BigIntValue(proportion));
         var userPointsValue = new BigIntValue(points).Div(new BigIntValue(10).Pow(inscriptionDecimal));
@@ -80,6 +80,7 @@ public partial class SchrodingerContract
         {
             nameof(Adopt) => proportion == 0 ? SchrodingerContractConstants.DefaultAdoptProportion : proportion,
             nameof(Reroll) => proportion == 0 ? SchrodingerContractConstants.DefaultRerollProportion : proportion,
+            nameof(AdoptMaxGen) => proportion == 0 ? SchrodingerContractConstants.DefaultAdoptMaxGenProportion : proportion,
             _ => proportion == 0 ? SchrodingerContractConstants.DefaultProportion : proportion
         };
         return proportion;

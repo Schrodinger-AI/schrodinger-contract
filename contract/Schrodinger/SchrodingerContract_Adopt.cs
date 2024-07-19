@@ -64,7 +64,7 @@ public partial class SchrodingerContract
         State.SymbolCountMap[tick] = symbolCount.Add(1);
 
         JoinPointsContract(input.Domain);
-        SettlePoints(nameof(Adopt), adoptInfo.InputAmount, inscriptionInfo.Decimals);
+        SettlePoints(nameof(Adopt), adoptInfo.InputAmount, inscriptionInfo.Decimals, nameof(Adopt));
 
         Context.Fire(new Adopted
         {
@@ -371,6 +371,7 @@ public partial class SchrodingerContract
         Assert(adoptInfo!.Adopter == Context.Sender, "No permission.");
 
         Assert(!adoptInfo.IsConfirmed, "Adopt id already confirmed.");
+        Assert(!adoptInfo.IsRerolled, "Adopt id already rerolled.");
 
         adoptInfo.IsConfirmed = true;
         State.SymbolAdoptIdMap[adoptInfo.Symbol] = adoptInfo.AdoptId;
@@ -506,7 +507,7 @@ public partial class SchrodingerContract
         ProcessRerollTransfer(input.Symbol, input.Amount, inscriptionInfo.Ancestor);
 
         JoinPointsContract(input.Domain);
-        SettlePoints(nameof(Reroll), input.Amount, inscriptionInfo.Decimals);
+        SettlePoints(nameof(Reroll), input.Amount, inscriptionInfo.Decimals, nameof(Reroll));
 
         Context.Fire(new Rerolled
         {
@@ -566,7 +567,8 @@ public partial class SchrodingerContract
         State.SymbolCountMap[input.Tick] = symbolCount.Add(1);
 
         JoinPointsContract(input.Domain);
-        SettlePoints(nameof(Adopt), adoptInfo.InputAmount, inscriptionInfo.Decimals);
+        // AdoptMaxGen has the same type of point with Adopt
+        SettlePoints(nameof(Adopt), adoptInfo.InputAmount, inscriptionInfo.Decimals, nameof(AdoptMaxGen));
 
         Context.Fire(new Adopted
         {
@@ -670,5 +672,40 @@ public partial class SchrodingerContract
     private string GetInscriptionSymbol(string tick)
     {
         return tick + SchrodingerContractConstants.Separator + SchrodingerContractConstants.AncestorSymbolSuffix;
+    }
+
+    public override Empty RerollAdoption(Hash input)
+    {
+        Assert(IsHashValid(input), "Invalid input.");
+        
+        var adoptInfo = State.AdoptInfoMap[input];
+        Assert(adoptInfo != null, "Adopt id not exists.");
+        Assert(adoptInfo!.Adopter == Context.Sender, "No permission.");
+        Assert(!adoptInfo.IsRerolled, "Already rerolled.");
+        Assert(!adoptInfo.IsConfirmed, "Already confirmed.");
+        
+        var tick = GetTickFromSymbol(adoptInfo.Symbol);
+        var inscriptionInfo = State.InscriptionInfoMap[tick];
+        
+        State.TokenContract.Transfer.Send(new TransferInput
+        {
+            Amount = adoptInfo.OutputAmount,
+            To = Context.Sender,
+            Symbol = inscriptionInfo.Ancestor
+        });
+
+        adoptInfo.IsRerolled = true;
+        
+        SettlePoints(nameof(Reroll), adoptInfo.OutputAmount, inscriptionInfo.Decimals, nameof(Reroll));
+        
+        Context.Fire(new AdoptionRerolled
+        {
+            AdoptId = input,
+            Amount = adoptInfo.OutputAmount,
+            Symbol = inscriptionInfo.Ancestor,
+            Account = Context.Sender
+        });
+        
+        return new Empty();
     }
 }

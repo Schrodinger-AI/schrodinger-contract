@@ -43,4 +43,5 @@ public static class SchrodingerContractConstants
     public const long DefaultAdoptProportion = 131400000000;
     public const long DefaultRerollProportion = 191900000000;
     public const long DefaultProportion = 100000000;
+    public const long DefaultAdoptMaxGenProportion = 966600000000;
 }
