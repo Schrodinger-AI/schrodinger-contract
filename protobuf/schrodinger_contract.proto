@@ -117,6 +117,8 @@ message DeployInput {
   aelf.Address signatory = 17;
   string image_uri = 18;
   int64 max_gen_loss_rate = 19;
+  bool is_reward_enabled = 20;
+  int64 reward_threshold = 21;
 }
 
 message DeployInscriptionInfo {
@@ -307,7 +309,8 @@ message InscriptionInfo {
   int32 image_count = 10;
   int32 attributes_per_gen = 11;
   int64 max_gen_loss_rate = 12;
-  int64 reward_threshold = 13;     // trigger reward mechanism when adoptMaxGen reaches reward threshold
+  bool is_reward_enabled = 13;
+  int64 reward_threshold = 14;     // trigger reward mechanism when adoptMaxGen reaches reward threshold
 }
 
 message GetTokenInfoOutput {
@@ -369,7 +372,8 @@ message SetOfficialDomainAliasInput {
 
 message SetRewardThresholdInput {
   string tick = 1;
-  int64 reward_threshold = 2;
+  bool is_reward_enabled = 2;
+  int64 reward_threshold = 3;
 }
 
 message GetUserOperationStatusInput {
@@ -413,6 +417,8 @@ message Deployed {
   aelf.Address signatory = 20;
   string image_uri = 21;
   int64 max_gen_loss_rate = 22;
+  bool is_reward_enabled = 23;
+  int64 reward_threshold = 24;
 }
 
 message Adopted {
@@ -585,5 +591,6 @@ message AdoptionRerolled {
 message RewardThresholdSet {
   option (aelf.is_event) = true;
   string tick = 1;
-  int64 reward_threshold = 2;
+  bool is_reward_enabled = 2;
+  int64 reward_threshold = 3;
 }

@@ -2,7 +2,6 @@ using System.Linq;
 using AElf;
 using AElf.Contracts.MultiToken;
 using AElf.Sdk.CSharp;
-using AElf.Types;
 using Google.Protobuf.WellKnownTypes;
 
 namespace Schrodinger;
@@ -223,6 +222,30 @@ public partial class SchrodingerContract
                 Symbol = inscriptionInfo.Ancestor,
                 To = input.Recipient
             });
+
+        return new Empty();
+    }
+
+    public override Empty SetRewardThreshold(SetRewardThresholdInput input)
+    {
+        Assert(input != null, "Invalid input.");
+        Assert(IsStringValid(input.Tick), "Invalid input tick.");
+        Assert(!input.IsRewardEnabled || input.RewardThreshold >= 0, "Invalid reward threshold.");
+
+        var inscriptionInfo = CheckInscriptionExistAndPermission(input.Tick);
+
+        if (inscriptionInfo.IsRewardEnabled == input.IsRewardEnabled &&
+            inscriptionInfo.RewardThreshold == input.RewardThreshold) return new Empty();
+
+        inscriptionInfo.IsRewardEnabled = input.IsRewardEnabled;
+        inscriptionInfo.RewardThreshold = input.RewardThreshold;
+
+        Context.Fire(new RewardThresholdSet
+        {
+            Tick = input.Tick,
+            IsRewardEnabled = input.IsRewardEnabled,
+            RewardThreshold = input.RewardThreshold
+        });
 
         return new Empty();
     }

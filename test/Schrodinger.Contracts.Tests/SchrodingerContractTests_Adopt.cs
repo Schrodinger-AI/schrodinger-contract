@@ -30,19 +30,19 @@ public partial class SchrodingerContractTests
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
             Symbol = Gen0,
-            Amount = 1000,
+            Amount = 4_00000000,
             To = DefaultAddress
         });
 
         {
             var balance = await GetTokenBalance(Gen0, DefaultAddress);
-            balance.ShouldBe(1000);
+            balance.ShouldBe(4_00000000);
         }
 
         await TokenContractStub.Approve.SendAsync(new ApproveInput
         {
             Symbol = Gen0,
-            Amount = 1000,
+            Amount = 2_00000000,
             Spender = SchrodingerContractAddress
         });
 
@@ -50,17 +50,17 @@ public partial class SchrodingerContractTests
             var result = await SchrodingerContractStub.Adopt.SendAsync(new AdoptInput
             {
                 Parent = Gen0,
-                Amount = 1000,
+                Amount = 2_00000000,
                 Domain = "test"
             });
 
             var log = GetLogEvent<Adopted>(result.TransactionResult);
             log.Ancestor.ShouldBe(Gen0);
             log.Adopter.ShouldBe(DefaultAddress);
-            log.InputAmount.ShouldBe(1000);
-            log.OutputAmount.ShouldBe(950);
-            log.LossAmount.ShouldBe(45);
-            log.CommissionAmount.ShouldBe(5);
+            log.InputAmount.ShouldBe(2_00000000);
+            log.OutputAmount.ShouldBe(1_90000000);
+            log.LossAmount.ShouldBe(9000000);
+            log.CommissionAmount.ShouldBe(1000000);
 
             adoptId = log.AdoptId;
             symbol = log.Symbol;
@@ -91,11 +91,11 @@ public partial class SchrodingerContractTests
 
         {
             var balance = await GetTokenBalance(Gen0, DefaultAddress);
-            balance.ShouldBe(5);
+            balance.ShouldBe(2_01000000);
         }
         {
             var balance = await GetTokenBalance(symbol, DefaultAddress);
-            balance.ShouldBe(950);
+            balance.ShouldBe(1_90000000);
         }
 
         {
@@ -103,13 +103,13 @@ public partial class SchrodingerContractTests
             {
                 Spender = SchrodingerContractAddress,
                 Symbol = symbol,
-                Amount = 950
+                Amount = 1_90000000
             });
 
             var result = await SchrodingerContractStub.Adopt.SendAsync(new AdoptInput
             {
                 Parent = symbol,
-                Amount = 950,
+                Amount = 1_90000000,
                 Domain = "test"
             });
 
@@ -196,28 +196,28 @@ public partial class SchrodingerContractTests
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             To = DefaultAddress
         });
 
         await TokenContractStub.Approve.SendAsync(new ApproveInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Spender = SchrodingerContractAddress
         });
 
         var result = await SchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
         {
             Tick = "SGR",
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Domain = "test"
         });
 
         var log = GetLogEvent<Adopted>(result.TransactionResult);
         log.Parent.ShouldBe(Gen0);
         log.ParentGen.ShouldBe(0);
-        log.InputAmount.ShouldBe(2_00000000);
+        log.InputAmount.ShouldBe(1_60000000);
         log.OutputAmount.ShouldBe(1_00000000);
         log.Attributes.Data.Count.ShouldBe(11);
         log.Gen.ShouldBe(9);
@@ -228,7 +228,7 @@ public partial class SchrodingerContractTests
         var adoptInfo = await SchrodingerContractStub.GetAdoptInfo.CallAsync(log.AdoptId);
         adoptInfo.Parent.ShouldBe(Gen0);
         adoptInfo.ParentGen.ShouldBe(0);
-        adoptInfo.InputAmount.ShouldBe(2_00000000);
+        adoptInfo.InputAmount.ShouldBe(1_60000000);
         adoptInfo.OutputAmount.ShouldBe(1_00000000);
         adoptInfo.Attributes.Data.Count.ShouldBe(11);
         adoptInfo.Gen.ShouldBe(9);
@@ -239,21 +239,21 @@ public partial class SchrodingerContractTests
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             To = UserAddress
         });
 
         await TokenContractUserStub.Approve.SendAsync(new ApproveInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Spender = SchrodingerContractAddress
         });
 
         result = await UserSchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
         {
             Tick = "SGR",
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Domain = "test"
         });
         result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
@@ -316,6 +316,196 @@ public partial class SchrodingerContractTests
             Domain = "test"
         });
         result.TransactionResult.Error.ShouldContain("Input amount not enough.");
+    }
+    
+    [Fact]
+    public async Task AdoptMaxGenTests_Reward()
+    {
+        await DeployForMaxGen();
+
+        var output = await SchrodingerContractStub.GetUserOperationStatus.CallAsync(new GetUserOperationStatusInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.RewardThreshold.ShouldBe(0);
+        output.OperationCount.ShouldBe(0);
+
+        var result = await SchrodingerContractStub.SetRewardThreshold.SendAsync(new SetRewardThresholdInput
+        {
+            IsRewardEnabled = true,
+            RewardThreshold = 1,
+            Tick = _tick
+        });
+        result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
+        
+        output = await SchrodingerContractStub.GetUserOperationStatus.CallAsync(new GetUserOperationStatusInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.RewardThreshold.ShouldBe(1);
+        output.OperationCount.ShouldBe(0);
+
+        var log = GetLogEvent<RewardThresholdSet>(result.TransactionResult);
+        log.Tick.ShouldBe(_tick);
+        log.IsRewardEnabled.ShouldBeTrue();
+        log.RewardThreshold.ShouldBe(1);
+
+        await TokenContractStub.Issue.SendAsync(new IssueInput
+        {
+            Symbol = Gen0,
+            Amount = 3_20000000,
+            To = DefaultAddress
+        });
+
+        await TokenContractStub.Approve.SendAsync(new ApproveInput
+        {
+            Symbol = Gen0,
+            Amount = 3_20000000,
+            Spender = SchrodingerContractAddress
+        });
+
+        result = await SchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
+        {
+            Tick = _tick,
+            Amount = 1_60000000,
+            Domain = "test"
+        });
+        
+        var adopted = GetLogEvent<Adopted>(result.TransactionResult);
+        adopted.InputAmount.ShouldBe(1_60000000);
+        adopted.OutputAmount.ShouldBe(1_00000000);
+        
+        await SchrodingerContractStub.Confirm.SendAsync(new ConfirmInput
+        {
+            AdoptId = adopted.AdoptId,
+            Image = "image",
+            ImageUri = "uri",
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, adopted.AdoptId, "image", "uri")
+        });
+        
+        output = await SchrodingerContractStub.GetUserOperationStatus.CallAsync(new GetUserOperationStatusInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.RewardThreshold.ShouldBe(1);
+        output.OperationCount.ShouldBe(1);
+        
+        result = await SchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
+        {
+            Tick = _tick,
+            Amount = 1_60000000,
+            Domain = "test"
+        });
+        
+        adopted = GetLogEvent<Adopted>(result.TransactionResult);
+        adopted.InputAmount.ShouldBe(1);
+        adopted.OutputAmount.ShouldBe(1);
+        
+        output = await SchrodingerContractStub.GetUserOperationStatus.CallAsync(new GetUserOperationStatusInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.RewardThreshold.ShouldBe(1);
+        output.OperationCount.ShouldBe(0);
+    }
+    
+    [Fact]
+    public async Task AdoptMaxGenTests_Reward_Fail()
+    {
+        await DeployForMaxGen();
+
+        var output = await SchrodingerContractStub.GetUserOperationStatus.CallAsync(new GetUserOperationStatusInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.RewardThreshold.ShouldBe(0);
+        output.OperationCount.ShouldBe(0);
+
+        var result = await SchrodingerContractStub.SetRewardThreshold.SendAsync(new SetRewardThresholdInput
+        {
+            IsRewardEnabled = true,
+            RewardThreshold = 1,
+            Tick = _tick
+        });
+        result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
+        
+        output = await SchrodingerContractStub.GetUserOperationStatus.CallAsync(new GetUserOperationStatusInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.RewardThreshold.ShouldBe(1);
+        output.OperationCount.ShouldBe(0);
+
+        var log = GetLogEvent<RewardThresholdSet>(result.TransactionResult);
+        log.Tick.ShouldBe(_tick);
+        log.IsRewardEnabled.ShouldBeTrue();
+        log.RewardThreshold.ShouldBe(1);
+
+        await TokenContractStub.Issue.SendAsync(new IssueInput
+        {
+            Symbol = Gen0,
+            Amount = 3_20000000,
+            To = DefaultAddress
+        });
+
+        await TokenContractStub.Approve.SendAsync(new ApproveInput
+        {
+            Symbol = Gen0,
+            Amount = 3_20000000,
+            Spender = SchrodingerContractAddress
+        });
+
+        result = await SchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
+        {
+            Tick = _tick,
+            Amount = 1_60000000,
+            Domain = "test"
+        });
+        
+        var adopted = GetLogEvent<Adopted>(result.TransactionResult);
+        adopted.InputAmount.ShouldBe(1_60000000);
+        adopted.OutputAmount.ShouldBe(1_00000000);
+        
+        await SchrodingerContractStub.Confirm.SendAsync(new ConfirmInput
+        {
+            AdoptId = adopted.AdoptId,
+            Image = "image",
+            ImageUri = "uri",
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, adopted.AdoptId, "image", "uri")
+        });
+        
+        output = await SchrodingerContractStub.GetUserOperationStatus.CallAsync(new GetUserOperationStatusInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.RewardThreshold.ShouldBe(1);
+        output.OperationCount.ShouldBe(1);
+        
+        result = await SchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
+        {
+            Tick = _tick,
+            Amount = 1_60000000,
+            Domain = "test"
+        });
+        
+        adopted = GetLogEvent<Adopted>(result.TransactionResult);
+        adopted.InputAmount.ShouldBe(1);
+        adopted.OutputAmount.ShouldBe(1);
+        
+        output = await SchrodingerContractStub.GetUserOperationStatus.CallAsync(new GetUserOperationStatusInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.RewardThreshold.ShouldBe(1);
+        output.OperationCount.ShouldBe(0);
     }
 
     [Fact]
@@ -476,7 +666,7 @@ public partial class SchrodingerContractTests
             },
             Signatory = DefaultAddress,
             ImageUri = "uri",
-            MaxGenLossRate = 5000
+            MaxGenLossRate = 3750
         });
     }
 

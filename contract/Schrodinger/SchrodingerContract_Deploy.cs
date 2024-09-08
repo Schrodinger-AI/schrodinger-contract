@@ -24,7 +24,8 @@ public partial class SchrodingerContract
             IsWeightEnabled = input.IsWeightEnabled,
             ImageCount = input.ImageCount,
             AttributesPerGen = input.AttributesPerGen,
-            MaxGenLossRate = input.MaxGenLossRate
+            MaxGenLossRate = input.MaxGenLossRate,
+            RewardThreshold = input.RewardThreshold
         };
         State.InscriptionInfoMap[tick] = inscription;
         State.SignatoryMap[tick] = input.Signatory;
@@ -45,7 +46,7 @@ public partial class SchrodingerContract
             TotalSupply = input.TotalSupply,
             Decimals = inscription.Decimals,
             AttributeLists = attributeList,
-            ImageCount = input.ImageCount,
+            ImageCount = inscription.ImageCount,
             Issuer = input.Issuer ?? Context.Sender,
             Owner = Context.Self,
             IssueChainId = Context.ChainId,
@@ -55,15 +56,16 @@ public partial class SchrodingerContract
             {
                 Value = { externalInfo.Value }
             },
-            CrossGenerationConfig = input.CrossGenerationConfig,
-            IsWeightEnabled = input.IsWeightEnabled,
+            CrossGenerationConfig = inscription.CrossGenerationConfig,
+            IsWeightEnabled = inscription.IsWeightEnabled,
             Admin = inscription.Admin,
             LossRate = inscription.LossRate,
             CommissionRate = inscription.CommissionRate,
-            AttributesPerGen = input.AttributesPerGen,
+            AttributesPerGen = inscription.AttributesPerGen,
             ImageUri = input.ImageUri,
             Signatory = input.Signatory,
-            MaxGenLossRate = inscription.MaxGenLossRate
+            MaxGenLossRate = inscription.MaxGenLossRate,
+            RewardThreshold = inscription.RewardThreshold
         });
         return new Empty();
     }

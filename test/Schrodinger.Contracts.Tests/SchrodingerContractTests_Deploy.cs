@@ -76,7 +76,7 @@ public partial class SchrodingerContractTests
             Image = _image,
             SeedSymbol = "SEED-1",
             TokenName = _tokenName,
-            Decimals = 0,
+            Decimals = 8,
             IssueChainId = _mainChainId,
             ImageUri = "uri"
         });
@@ -100,13 +100,13 @@ public partial class SchrodingerContractTests
             AttributesPerGen = 1,
             MaxGeneration = 4,
             ImageCount = 2,
-            Decimals = 0,
+            Decimals = 8,
             CommissionRate = 1000,
             LossRate = 500,
             AttributeLists = GetAttributeLists(),
             Image = _image,
             IsWeightEnabled = true,
-            TotalSupply = 21000000,
+            TotalSupply = 21000000_00000000,
             CrossGenerationConfig = new CrossGenerationConfig
             {
                 Gen = 2,

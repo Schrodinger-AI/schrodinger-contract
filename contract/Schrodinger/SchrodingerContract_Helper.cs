@@ -428,6 +428,9 @@ public partial class SchrodingerContract
 
         Assert(IsAddressValid(input.Signatory), "Invalid input signatory.");
         Assert(IsStringValid(input.ImageUri), "Invalid input image uri.");
+        
+        Assert(input.MaxGenLossRate >= 0, "Invalid input max gen loss rate.");
+        Assert(!input.IsRewardEnabled || input.RewardThreshold >= 0, "Invalid input reward threshold.");
     }
 
     private void CheckRate(long lossRate, long commissionRate, long maxGenLossRate)
