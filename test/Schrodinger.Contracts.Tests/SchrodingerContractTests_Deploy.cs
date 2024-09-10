@@ -106,7 +106,7 @@ public partial class SchrodingerContractTests
             AttributeLists = GetAttributeLists(),
             Image = _image,
             IsWeightEnabled = true,
-            TotalSupply = 21000000,
+            TotalSupply = 21000000_00000000,
             CrossGenerationConfig = new CrossGenerationConfig
             {
                 Gen = 2,

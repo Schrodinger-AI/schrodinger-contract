@@ -23,70 +23,7 @@ public partial class SchrodingerContract
     {
         return new BoolValue { Value = State.JoinRecord[address] };
     }
-
-    private void JoinPointsContract(string domain, Address registrant = null)
-    {
-        registrant ??= Context.Sender;
-        if (!IsHashValid(State.PointsContractDAppId.Value) || State.PointsContract.Value == null)
-        {
-            return;
-        }
-
-        if (State.JoinRecord[registrant]) return;
-
-        if (domain == null || domain == State.OfficialDomainAlias.Value)
-        {
-            domain = State.PointsContract.GetDappInformation.Call(new GetDappInformationInput
-            {
-                DappId = State.PointsContractDAppId.Value
-            })?.DappInfo?.OfficialDomain;
-        }
-
-        State.JoinRecord[registrant] = true;
-
-        State.PointsContract.Join.Send(new Points.Contracts.Point.JoinInput
-        {
-            DappId = State.PointsContractDAppId.Value,
-            Domain = domain,
-            Registrant = registrant
-        });
-
-        Context.Fire(new Joined
-        {
-            Domain = domain,
-            Registrant = registrant
-        });
-    }
-
-    private void SettlePoints(string actionName, long amount, int inscriptionDecimal, string proportionActionName)
-    {
-        var proportion = GetProportion(proportionActionName);
-
-        var points = new BigIntValue(amount).Mul(new BigIntValue(proportion));
-        var userPointsValue = new BigIntValue(points).Div(new BigIntValue(10).Pow(inscriptionDecimal));
-        State.PointsContract.Settle.Send(new SettleInput
-        {
-            DappId = State.PointsContractDAppId.Value,
-            ActionName = actionName,
-            UserAddress = Context.Sender,
-            UserPointsValue = userPointsValue
-        });
-    }
-
-    private long GetProportion(string actionName)
-    {
-        var proportion = State.PointsProportion[actionName];
-        proportion = actionName switch
-        {
-            nameof(Adopt) => proportion == 0 ? SchrodingerContractConstants.DefaultAdoptProportion : proportion,
-            nameof(Reroll) => proportion == 0 ? SchrodingerContractConstants.DefaultRerollProportion : proportion,
-            nameof(AdoptMaxGen) => proportion == 0 ? SchrodingerContractConstants.DefaultAdoptMaxGenProportion : proportion,
-            _ => proportion == 0 ? SchrodingerContractConstants.DefaultProportion : proportion
-        };
-        return proportion;
-    }
-
-
+    
     public override Empty BatchSettle(BatchSettleInput input)
     {
         CheckSettleAdminPermission();
@@ -173,5 +110,67 @@ public partial class SchrodingerContract
         });
         
         return new Empty();
+    }
+    
+    private void JoinPointsContract(string domain, Address registrant = null)
+    {
+        registrant ??= Context.Sender;
+        if (!IsHashValid(State.PointsContractDAppId.Value) || State.PointsContract.Value == null)
+        {
+            return;
+        }
+
+        if (State.JoinRecord[registrant]) return;
+
+        if (domain == null || domain == State.OfficialDomainAlias.Value)
+        {
+            domain = State.PointsContract.GetDappInformation.Call(new GetDappInformationInput
+            {
+                DappId = State.PointsContractDAppId.Value
+            })?.DappInfo?.OfficialDomain;
+        }
+
+        State.JoinRecord[registrant] = true;
+
+        State.PointsContract.Join.Send(new Points.Contracts.Point.JoinInput
+        {
+            DappId = State.PointsContractDAppId.Value,
+            Domain = domain,
+            Registrant = registrant
+        });
+
+        Context.Fire(new Joined
+        {
+            Domain = domain,
+            Registrant = registrant
+        });
+    }
+
+    private void SettlePoints(string actionName, long amount, int inscriptionDecimal, string proportionActionName)
+    {
+        var proportion = GetProportion(proportionActionName);
+
+        var points = new BigIntValue(amount).Mul(new BigIntValue(proportion));
+        var userPointsValue = new BigIntValue(points).Div(new BigIntValue(10).Pow(inscriptionDecimal));
+        State.PointsContract.Settle.Send(new SettleInput
+        {
+            DappId = State.PointsContractDAppId.Value,
+            ActionName = actionName,
+            UserAddress = Context.Sender,
+            UserPointsValue = userPointsValue
+        });
+    }
+
+    private long GetProportion(string actionName)
+    {
+        var proportion = State.PointsProportion[actionName];
+        proportion = actionName switch
+        {
+            nameof(Adopt) => proportion == 0 ? SchrodingerContractConstants.DefaultAdoptProportion : proportion,
+            nameof(Reroll) => proportion == 0 ? SchrodingerContractConstants.DefaultRerollProportion : proportion,
+            nameof(AdoptMaxGen) => proportion == 0 ? SchrodingerContractConstants.DefaultAdoptMaxGenProportion : proportion,
+            _ => proportion == 0 ? SchrodingerContractConstants.DefaultProportion : proportion
+        };
+        return proportion;
     }
 }

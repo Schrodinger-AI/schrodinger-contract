@@ -39,42 +39,6 @@ public partial class SchrodingerContract
         return new Empty();
     }
 
-    private void FireRandomAttributeSetLogEvent(AttributeInfo toRemove, AttributeSet attributeSet)
-    {
-        var logEvent = new RandomAttributeSet();
-        if (toRemove != null)
-        {
-            logEvent.RemovedAttribute = new AttributeSet
-            {
-                TraitType = toRemove
-            };
-        }
-        else
-        {
-            logEvent.AddedAttribute = attributeSet;
-        }
-
-        Context.Fire(logEvent);
-    }
-
-    private void FireFixedAttributeSetLogEvent(AttributeInfo toRemove, AttributeSet attributeSet)
-    {
-        var logEvent = new FixedAttributeSet();
-        if (toRemove != null)
-        {
-            logEvent.RemovedAttribute = new AttributeSet
-            {
-                TraitType = toRemove
-            };
-        }
-        else
-        {
-            logEvent.AddedAttribute = attributeSet;
-        }
-
-        Context.Fire(logEvent);
-    }
-
     public override Empty SetImageCount(SetImageCountInput input)
     {
         Assert(IsStringValid(input.Tick), "Invalid input.");
@@ -225,5 +189,41 @@ public partial class SchrodingerContract
             });
 
         return new Empty();
+    }
+    
+    private void FireRandomAttributeSetLogEvent(AttributeInfo toRemove, AttributeSet attributeSet)
+    {
+        var logEvent = new RandomAttributeSet();
+        if (toRemove != null)
+        {
+            logEvent.RemovedAttribute = new AttributeSet
+            {
+                TraitType = toRemove
+            };
+        }
+        else
+        {
+            logEvent.AddedAttribute = attributeSet;
+        }
+
+        Context.Fire(logEvent);
+    }
+
+    private void FireFixedAttributeSetLogEvent(AttributeInfo toRemove, AttributeSet attributeSet)
+    {
+        var logEvent = new FixedAttributeSet();
+        if (toRemove != null)
+        {
+            logEvent.RemovedAttribute = new AttributeSet
+            {
+                TraitType = toRemove
+            };
+        }
+        else
+        {
+            logEvent.AddedAttribute = attributeSet;
+        }
+
+        Context.Fire(logEvent);
     }
 }
