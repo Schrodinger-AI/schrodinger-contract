@@ -23,20 +23,6 @@ public partial class SchrodingerContract
         return new Empty();
     }
 
-    private void ValidateConfigInput(Config input)
-    {
-        Assert(input != null, "Invalid input.");
-        Assert(input.MaxGen > 0, "Invalid max generation.");
-        Assert(input.ImageMaxSize > 0, "Invalid image max size.");
-        Assert(input.ImageMaxCount > 0, "Invalid image max count.");
-        Assert(input.TraitTypeMaxCount > 0, "Invalid trait type max count.");
-        Assert(input.TraitValueMaxCount > 0, "Invalid trait value max count.");
-        Assert(input.AttributeMaxLength > 0, "Invalid attribute max length.");
-        Assert(input.MaxAttributesPerGen > 0, "Invalid max attributes per generation.");
-        Assert(input.FixedTraitTypeMaxCount > 0, "Invalid fixed trait type max count.");
-        Assert(input.ImageUriMaxSize > 0, "Invalid image uri max size.");
-    }
-
     public override Empty SetMaxGenerationConfig(Int32Value input)
     {
         CheckAdminPermission();
@@ -160,5 +146,19 @@ public partial class SchrodingerContract
         });
         
         return new Empty();
+    }
+    
+    private void ValidateConfigInput(Config input)
+    {
+        Assert(input != null, "Invalid input.");
+        Assert(input.MaxGen > 0, "Invalid max generation.");
+        Assert(input.ImageMaxSize > 0, "Invalid image max size.");
+        Assert(input.ImageMaxCount > 0, "Invalid image max count.");
+        Assert(input.TraitTypeMaxCount > 0, "Invalid trait type max count.");
+        Assert(input.TraitValueMaxCount > 0, "Invalid trait value max count.");
+        Assert(input.AttributeMaxLength > 0, "Invalid attribute max length.");
+        Assert(input.MaxAttributesPerGen > 0, "Invalid max attributes per generation.");
+        Assert(input.FixedTraitTypeMaxCount > 0, "Invalid fixed trait type max count.");
+        Assert(input.ImageUriMaxSize > 0, "Invalid image uri max size.");
     }
 }

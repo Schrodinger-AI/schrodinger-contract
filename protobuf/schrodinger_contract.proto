@@ -21,6 +21,7 @@ service SchrodingerContract {
   rpc Reroll (RerollInput) returns (google.protobuf.Empty) {}
   rpc AdoptMaxGen (AdoptMaxGenInput) returns (google.protobuf.Empty) {}
   rpc RerollAdoption (aelf.Hash) returns (google.protobuf.Empty) {}
+  rpc UpdateAdoption (aelf.Hash) returns (google.protobuf.Empty) {}
 
   // token
   rpc SetFixedAttribute (SetAttributeInput) returns (google.protobuf.Empty) {}
@@ -191,6 +192,7 @@ message AdoptInfo {
   aelf.Address adopter = 13;          // sender
   bool is_confirmed = 14;
   bool is_rerolled = 15;
+  bool is_updated = 16;
 }
 
 message Attributes {
@@ -562,4 +564,23 @@ message AdoptionRerolled {
   string symbol = 2;
   int64 amount = 3;
   aelf.Address account = 4;
+}
+
+message AdoptionUpdated {
+  option (aelf.is_event) = true;
+  aelf.Hash adopt_id = 1;
+  string parent = 2;
+  int32 parent_gen = 3;
+  int64 input_amount = 4;
+  int64 loss_amount = 5;
+  int64 commission_amount = 6;
+  int64 output_amount = 7;
+  int64 image_count = 8;
+  aelf.Address adopter = 9;
+  int64 block_height = 10;                 // adopt block height
+  Attributes attributes = 11;              // generated attributes
+  int32 gen = 12;                          // generated generation
+  string ancestor = 13;
+  string symbol = 14;
+  string token_name = 15;
 }
