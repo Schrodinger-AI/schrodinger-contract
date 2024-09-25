@@ -326,7 +326,7 @@ public partial class SchrodingerContract
         State.SymbolCountMap[tick] = symbolCount.Add(1);
 
         // JoinPointsContract(input.Domain);
-        // SettlePoints(nameof(Adopt), newAdoptInfo.InputAmount, inscriptionInfo.Decimals, nameof(Adopt));
+        SettlePoints(nameof(Adopt), newAdoptInfo.InputAmount, inscriptionInfo.Decimals, nameof(Adopt));
 
         Context.Fire(new AdoptionUpdated
         {
