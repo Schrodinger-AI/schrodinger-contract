@@ -100,7 +100,7 @@ public partial class SchrodingerContractTests
             AttributesPerGen = 1,
             MaxGeneration = 4,
             ImageCount = 2,
-            Decimals = 0,
+            Decimals = 8,
             CommissionRate = 1000,
             LossRate = 500,
             AttributeLists = GetAttributeLists(),
@@ -117,7 +117,7 @@ public partial class SchrodingerContractTests
             },
             Signatory = DefaultAddress,
             ImageUri = "uri",
-            MaxGenLossRate = 5000
+            MaxGenLossRate = 3750
         });
         var log = GetLogEvent<Deployed>(result.TransactionResult);
         var inscription = await SchrodingerContractStub.GetInscriptionInfo.CallAsync(new StringValue
@@ -128,7 +128,7 @@ public partial class SchrodingerContractTests
         inscription.MaxGen.ShouldBe(4);
         inscription.CommissionRate.ShouldBe(1000);
         inscription.LossRate.ShouldBe(500);
-        inscription.MaxGenLossRate.ShouldBe(5000);
+        inscription.MaxGenLossRate.ShouldBe(3750);
         inscription.IsWeightEnabled.ShouldBe(true);
         var attributeList = await SchrodingerContractStub.GetAttributeTypes.CallAsync(new StringValue
         {
@@ -490,7 +490,7 @@ public partial class SchrodingerContractTests
         });
         output.LossRate.ShouldBe(500);
         output.CommissionRate.ShouldBe(1000);
-        output.MaxGenLossRate.ShouldBe(5000);
+        output.MaxGenLossRate.ShouldBe(3750);
 
         var result = await SchrodingerContractStub.SetRates.SendAsync(new SetRatesInput
         {

@@ -3,6 +3,7 @@ using AElf;
 using AElf.Contracts.MultiToken;
 using AElf.Sdk.CSharp;
 using AElf.Types;
+using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 
 namespace Schrodinger;
@@ -152,7 +153,7 @@ public partial class SchrodingerContract
     public override Empty SetSignatory(SetSignatoryInput input)
     {
         Assert(input != null, "Invalid input.");
-        Assert(IsStringValid(input.Tick), "Invalid input tick.");
+        Assert(IsStringValid(input!.Tick), "Invalid input tick.");
         Assert(IsAddressValid(input.Signatory), "Invalid signatory address.");
 
         CheckInscriptionExistAndPermission(input.Tick);
@@ -173,7 +174,7 @@ public partial class SchrodingerContract
     public override Empty TransferFromReceivingAddress(TransferFromReceivingAddressInput input)
     {
         Assert(input != null, "Invalid input.");
-        Assert(IsStringValid(input.Tick), "Invalid input tick.");
+        Assert(IsStringValid(input!.Tick), "Invalid input tick.");
 
         var inscriptionInfo = CheckInscriptionExistAndPermission(input.Tick);
 
@@ -190,7 +191,28 @@ public partial class SchrodingerContract
 
         return new Empty();
     }
-    
+
+    public override Empty SetRewardConfig(SetRewardConfigInput input)
+    {
+        Assert(input != null, "Invalid input.");
+        Assert(IsStringValid(input!.Tick), "Invalid tick.");
+        var rewardList = ValidateRewardList(input.Rewards);
+
+        CheckInscriptionExistAndPermission(input.Tick);
+        if (rewardList.Equals(State.RewardListMap[input.Tick])) return new Empty();
+        
+        State.RewardListMap[input.Tick] = rewardList;
+        
+        Context.Fire(new RewardConfigSet
+        {
+            Tick = input.Tick,
+            List = new RewardList{Data = { input.Rewards }},
+            Pool = GetPoolAddress(input.Tick)
+        });
+        
+        return new Empty();
+    }
+
     private void FireRandomAttributeSetLogEvent(AttributeInfo toRemove, AttributeSet attributeSet)
     {
         var logEvent = new RandomAttributeSet();
@@ -225,5 +247,29 @@ public partial class SchrodingerContract
         }
 
         Context.Fire(logEvent);
+    }
+
+    private Address GetPoolAddress(string tick)
+    {
+        return Context.ConvertVirtualAddressToContractAddress(GetPoolHash(tick));
+    }
+
+    private Hash GetPoolHash(string tick)
+    {
+        return HashHelper.ConcatAndCompute(HashHelper.ComputeFrom(SchrodingerContractConstants.Spin),
+            HashHelper.ComputeFrom(tick));
+    }
+
+    private RewardList ValidateRewardList(RepeatedField<Reward> rewards)
+    {
+        Assert(rewards != null && rewards.Count > 0, "Invalid list.");
+
+        var rewardList = rewards!.Distinct().ToList();
+        Assert(rewardList.GroupBy(x => x.Name).Any(g => g.Count() <= 1), "List contains duplicate names.");
+
+        return new RewardList
+        {
+            Data = { rewardList }
+        };
     }
 }

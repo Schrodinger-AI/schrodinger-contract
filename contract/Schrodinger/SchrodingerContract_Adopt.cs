@@ -104,7 +104,9 @@ public partial class SchrodingerContract
 
         var tick = GetTickFromSymbol(adoptInfo.Parent);
 
-        Assert(RecoverAddressFromSignature(input) == (State.SignatoryMap[tick]), "Not authorized.");
+        Assert(
+            RecoverAddressFromSignature(ComputeConfirmInputHash(input), input.Signature) == (State.SignatoryMap[tick]),
+            "Not authorized.");
 
         var inscriptionInfo = State.InscriptionInfoMap[tick];
 
@@ -281,7 +283,7 @@ public partial class SchrodingerContract
         var parentGen = adoptInfo.Gen;
         var parentAttributes = adoptInfo.Attributes;
         var inputAmount = adoptInfo.OutputAmount;
-        
+
         var tick = GetTickFromSymbol(parent);
         var inscriptionInfo = State.InscriptionInfoMap[tick];
 
@@ -436,12 +438,15 @@ public partial class SchrodingerContract
         }
 
         // send commission to recipient
-        State.TokenContract.Transfer.Send(new TransferInput
+        if (commissionAmount > 0)
         {
-            Amount = commissionAmount,
-            To = recipient,
-            Symbol = ancestor
-        });
+            State.TokenContract.Transfer.Send(new TransferInput
+            {
+                Amount = commissionAmount,
+                To = recipient,
+                Symbol = ancestor
+            });
+        }
     }
 
     private void ProcessRerollTransfer(string symbol, long amount, string ancestor)
@@ -471,7 +476,7 @@ public partial class SchrodingerContract
         });
     }
 
-    private Hash GetRandomHash(long symbolCount)
+    private Hash GetRandomHash()
     {
         if (State.ConsensusContract.Value == null)
         {
@@ -479,12 +484,15 @@ public partial class SchrodingerContract
                 Context.GetContractAddressByName(SmartContractConstants.ConsensusContractSystemName);
         }
 
-        var randomHash = State.ConsensusContract.GetRandomHash.Call(new Int64Value
+        return State.ConsensusContract.GetRandomHash.Call(new Int64Value
         {
             Value = Context.CurrentHeight
         });
+    }
 
-        return HashHelper.ConcatAndCompute(HashHelper.ComputeFrom(symbolCount), randomHash);
+    private Hash GetRandomHash(long symbolCount)
+    {
+        return HashHelper.ConcatAndCompute(HashHelper.ComputeFrom(symbolCount), GetRandomHash());
     }
 
     private int GenerateGen(InscriptionInfo inscriptionInfo, int parentGen, Hash randomHash)
@@ -620,15 +628,6 @@ public partial class SchrodingerContract
         }
 
         return attributes;
-    }
-
-    private Address RecoverAddressFromSignature(ConfirmInput input)
-    {
-        var hash = ComputeConfirmInputHash(input);
-        var publicKey = Context.RecoverPublicKey(input.Signature.ToByteArray(), hash.ToByteArray());
-        Assert(publicKey != null, "Invalid signature.");
-
-        return Address.FromPublicKey(publicKey);
     }
 
     private Hash ComputeConfirmInputHash(ConfirmInput input)
@@ -788,7 +787,7 @@ public partial class SchrodingerContract
         var adoptInfo = State.AdoptInfoMap[adoptId];
         Assert(adoptInfo != null, "Adopt id not exists.");
         Assert(adoptInfo!.Adopter == Context.Sender, "No permission.");
-        
+
         Assert(!adoptInfo.IsConfirmed, "Adopt id already confirmed.");
         Assert(!adoptInfo.IsRerolled, "Adopt id already rerolled.");
         Assert(!adoptInfo.IsUpdated, "Adopt id already updated.");

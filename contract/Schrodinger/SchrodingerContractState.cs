@@ -52,4 +52,20 @@ public partial class SchrodingerContractState : ContractState
     public MappedState<string, string, int, TraitValues> TraitValuesMap { get; set; }
     
     public SingletonState<string> OfficialDomainAlias { get; set; }
+    
+    // tick -> RewardList
+    public MappedState<string, RewardList> RewardListMap { get; set; }
+    
+    public MappedState<Hash, bool> SpinSignatureMap { get; set; }
+
+    // spinId -> spinInfo
+    public MappedState<Hash, SpinInfo> SpinInfoMap { get; set; }
+    
+    public MappedState<Hash, VoucherInfo> VoucherInfoMap { get; set; }
+    
+    // tick -> address -> long
+    public MappedState<string, Address, long> AdoptionVoucherMap { get; set; }
+    
+    // tick -> admin
+    public MappedState<string, Address> AirdropAdminMap { get; set; }
 }
