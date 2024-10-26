@@ -97,13 +97,14 @@ public partial class SchrodingerContract
         }
 
         var upperWeightSums = State.UpperWeightSumsMap[tick][traitType];
-        
+
         if (upperWeightSums == null) return result;
-        
+
         for (var i = 0; i < upperWeightSums.Data.Count; i++)
         {
             result.Data.AddRange(State.TraitValuesMap[tick][traitType][i].TraitValueList.Data);
         }
+
         return result;
     }
 
@@ -146,5 +147,48 @@ public partial class SchrodingerContract
         {
             Value = State.OfficialDomainAlias.Value
         };
+    }
+
+    public override GetRewardConfigOutput GetRewardConfig(StringValue input)
+    {
+        var output = new GetRewardConfigOutput();
+
+        if (input != null && IsStringValid(input.Value))
+        {
+            output = new GetRewardConfigOutput
+            {
+                List = State.RewardListMap[input.Value],
+                Pool = GetPoolAddress(input.Value)
+            };
+        }
+
+        return output;
+    }
+
+    public override SpinInfo GetSpinInfo(Hash input)
+    {
+        return IsHashValid(input) ? State.SpinInfoMap[input] : new SpinInfo();
+    }
+
+    public override VoucherInfo GetVoucherInfo(Hash input)
+    {
+        return IsHashValid(input) ? State.VoucherInfoMap[input] : new VoucherInfo();
+    }
+
+    public override Int64Value GetAdoptionVoucherAmount(GetAdoptionVoucherAmountInput input)
+    {
+        var output = new Int64Value();
+
+        if (input != null && IsStringValid(input.Tick) && IsAddressValid(input.Account))
+        {
+            output.Value = State.AdoptionVoucherMap[input.Tick][input.Account];
+        }
+
+        return output;
+    }
+
+    public override Address GetAirdropAdmin(StringValue input)
+    {
+        return State.AirdropAdminMap[input.Value];
     }
 }

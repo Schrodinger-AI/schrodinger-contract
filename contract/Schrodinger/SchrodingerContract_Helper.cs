@@ -61,7 +61,7 @@ public partial class SchrodingerContract
     {
         var inscription = State.InscriptionInfoMap[tick];
         Assert(inscription != null, "Inscription not found.");
-        Assert(inscription.Admin == Context.Sender, "No permission.");
+        Assert(inscription!.Admin == Context.Sender, "No permission.");
         return inscription;
     }
 

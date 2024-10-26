@@ -3,6 +3,7 @@ using AElf;
 using AElf.Contracts.MultiToken;
 using AElf.Sdk.CSharp;
 using AElf.Types;
+using Google.Protobuf.Collections;
 using Google.Protobuf.WellKnownTypes;
 
 namespace Schrodinger;
@@ -152,7 +153,7 @@ public partial class SchrodingerContract
     public override Empty SetSignatory(SetSignatoryInput input)
     {
         Assert(input != null, "Invalid input.");
-        Assert(IsStringValid(input.Tick), "Invalid input tick.");
+        Assert(IsStringValid(input!.Tick), "Invalid input tick.");
         Assert(IsAddressValid(input.Signatory), "Invalid signatory address.");
 
         CheckInscriptionExistAndPermission(input.Tick);
@@ -173,7 +174,7 @@ public partial class SchrodingerContract
     public override Empty TransferFromReceivingAddress(TransferFromReceivingAddressInput input)
     {
         Assert(input != null, "Invalid input.");
-        Assert(IsStringValid(input.Tick), "Invalid input tick.");
+        Assert(IsStringValid(input!.Tick), "Invalid input tick.");
 
         var inscriptionInfo = CheckInscriptionExistAndPermission(input.Tick);
 
@@ -190,7 +191,7 @@ public partial class SchrodingerContract
 
         return new Empty();
     }
-    
+
     private void FireRandomAttributeSetLogEvent(AttributeInfo toRemove, AttributeSet attributeSet)
     {
         var logEvent = new RandomAttributeSet();
@@ -225,5 +226,42 @@ public partial class SchrodingerContract
         }
 
         Context.Fire(logEvent);
+    }
+
+    private Address GetPoolAddress(string tick)
+    {
+        return Context.ConvertVirtualAddressToContractAddress(GetPoolHash(tick));
+    }
+
+    private Hash GetPoolHash(string tick)
+    {
+        return HashHelper.ConcatAndCompute(HashHelper.ComputeFrom(SchrodingerContractConstants.Spin),
+            HashHelper.ComputeFrom(tick));
+    }
+
+    private RewardList ValidateRewardList(RepeatedField<Reward> rewards)
+    {
+        Assert(rewards != null && rewards.Count > 0, "Invalid rewards.");
+
+        var rewardList = rewards!.Distinct().ToList();
+        Assert(rewardList.GroupBy(x => x.Name).Any(g => g.Count() <= 1), "Rewards contains duplicate names.");
+
+        foreach (var reward in rewardList)
+        {
+            ValidateReward(reward);
+        }
+
+        return new RewardList
+        {
+            Data = { rewardList }
+        };
+    }
+
+    private void ValidateReward(Reward reward)
+    {
+        Assert(reward != null, "Invalid reward.");
+        Assert(IsStringValid(reward!.Name), "Invalid reward name.");
+        Assert(reward.Amount >= 0, "Invalid reward amount.");
+        Assert(reward.Weight >= 0, "Invalid reward weight.");
     }
 }
