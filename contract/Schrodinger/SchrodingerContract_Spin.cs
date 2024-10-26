@@ -247,7 +247,8 @@ public partial class SchrodingerContract
         switch (reward.Type)
         {
             case RewardType.AdoptionVoucher:
-                State.AdoptionVoucherMap[tick][Context.Sender]++;
+                State.AdoptionVoucherMap[tick][Context.Sender] =
+                    State.AdoptionVoucherMap[tick][Context.Sender].Add(reward.Amount);
                 break;
             case RewardType.Token:
                 var symbol = State.InscriptionInfoMap[tick].Ancestor;
