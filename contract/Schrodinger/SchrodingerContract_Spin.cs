@@ -11,13 +11,34 @@ namespace Schrodinger;
 
 public partial class SchrodingerContract
 {
+    public override Empty SetRewardConfig(SetRewardConfigInput input)
+    {
+        Assert(input != null, "Invalid input.");
+        Assert(IsStringValid(input!.Tick), "Invalid tick.");
+        var rewardList = ValidateRewardList(input.Rewards);
+
+        CheckInscriptionExistAndPermission(input.Tick);
+        if (rewardList.Equals(State.RewardListMap[input.Tick])) return new Empty();
+        
+        State.RewardListMap[input.Tick] = rewardList;
+        
+        Context.Fire(new RewardConfigSet
+        {
+            Tick = input.Tick,
+            List = new RewardList{Data = { input.Rewards }},
+            Pool = GetPoolAddress(input.Tick)
+        });
+        
+        return new Empty();
+    }
+    
     public override Empty Spin(SpinInput input)
     {
         Assert(input != null, "Invalid input.");
         Assert(IsStringValid(input!.Tick), "Invalid tick.");
         Assert(IsHashValid(input.Seed), "Invalid seed.");
         ValidateSignature(input.Signature, input.ExpirationTime);
-
+        
         Assert(
             RecoverAddressFromSignature(ComputeSpinInputHash(input), input.Signature) ==
             State.SignatoryMap[input.Tick], "Signature not valid.");
@@ -26,7 +47,7 @@ public partial class SchrodingerContract
 
         Assert(State.SpinInfoMap[spinId] == null, "Spin id exists.");
 
-        var reward = Spin(input.Tick);
+        var reward = Spin(input.Tick, input.Seed);
 
         var spinInfo = new SpinInfo
         {
@@ -99,14 +120,18 @@ public partial class SchrodingerContract
     {
         Assert(input != null, "Invalid input.");
         Assert(IsHashValid(input!.VoucherId), "Invalid voucher id.");
+        Assert(!input.Signature.IsNullOrEmpty(), "Invalid signature.");
 
         var voucherInfo = State.VoucherInfoMap[input.VoucherId];
         Assert(voucherInfo != null, "Voucher id not exists.");
         Assert(voucherInfo!.Account == Context.Sender, "No permission.");
         Assert(voucherInfo.AdoptId == null, "Already confirmed.");
+        
+        Assert(
+            RecoverAddressFromSignature(ComputeConfirmVoucherInputHash(input), input.Signature) ==
+            State.SignatoryMap[voucherInfo!.Tick], "Signature not valid.");
 
-        var inscriptionInfo = State.InscriptionInfoMap[voucherInfo!.Tick];
-        Assert(inscriptionInfo != null, "Tick not deployed.");
+        var inscriptionInfo = State.InscriptionInfoMap[voucherInfo.Tick];
 
         var symbolCount = State.SymbolCountMap[voucherInfo.Tick];
         var adoptId = GenerateAdoptId(voucherInfo.Tick, symbolCount);
@@ -195,9 +220,9 @@ public partial class SchrodingerContract
         return HashHelper.ConcatAndCompute(HashHelper.ComputeFrom(tick), seed);
     }
 
-    private Reward Spin(string tick)
+    private Reward Spin(string tick, Hash seed)
     {
-        var randomHash = GetRandomHash();
+        var randomHash = HashHelper.ConcatAndCompute(GetRandomHash(), HashHelper.ComputeFrom(seed));
 
         var rewardList = State.RewardListMap[tick].Data.OrderBy(r => r.Weight).ToList();
         var weightSum = rewardList.Sum(x => x.Weight);
@@ -208,7 +233,7 @@ public partial class SchrodingerContract
         foreach (var reward in rewardList)
         {
             currentWeight += reward.Weight;
-            if (currentWeight < random)
+            if (currentWeight >= random)
             {
                 return reward;
             }
@@ -262,12 +287,21 @@ public partial class SchrodingerContract
     private Hash GenerateVoucherId(string tick)
     {
         return HashHelper.ConcatAndCompute(HashHelper.ComputeFrom(tick),
-            HashHelper.ConcatAndCompute(Context.TransactionId, HashHelper.ComputeFrom(Context.Sender)));
+            HashHelper.ConcatAndCompute(HashHelper.ComputeFrom(State.VoucherIdCountMap[tick]++),
+                HashHelper.ComputeFrom(Context.Sender)));
     }
 
     private Hash GetRandomHash(Hash hash)
     {
         return HashHelper.ConcatAndCompute(hash, GetRandomHash());
+    }
+    
+    private Hash ComputeConfirmVoucherInputHash(ConfirmVoucherInput input)
+    {
+        return HashHelper.ComputeFrom(new ConfirmVoucherInput
+        {
+            VoucherId = input.VoucherId
+        });
     }
 
     private void CalculateAmountReverse(long lossRate, long commissionRate, long outputAmount, out long lossAmount,

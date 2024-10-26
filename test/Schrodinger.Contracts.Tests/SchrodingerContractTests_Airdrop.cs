@@ -39,6 +39,36 @@ public partial class SchrodingerContractTests
     }
 
     [Fact]
+    public async Task SetAirdropAdminTests_Fail()
+    {
+        await DeployTest();
+        
+        var result = await SchrodingerContractStub.SetAirdropAdmin.SendWithExceptionAsync(new SetAirdropAdminInput());
+        result.TransactionResult.Error.ShouldContain("Invalid tick.");
+        
+        result = await SchrodingerContractStub.SetAirdropAdmin.SendWithExceptionAsync(new SetAirdropAdminInput
+        {
+            Tick = "test"
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid admin.");
+        
+        result = await SchrodingerContractStub.SetAirdropAdmin.SendWithExceptionAsync(new SetAirdropAdminInput
+        {
+            Tick = "test",
+            Admin = UserAddress
+        });
+        result.TransactionResult.Error.ShouldContain("Inscription not found.");
+        
+        result = await UserSchrodingerContractStub.SetAirdropAdmin.SendWithExceptionAsync(new SetAirdropAdminInput
+        {
+            Tick = _tick,
+            Admin = UserAddress
+        });
+        result.TransactionResult.Error.ShouldContain("No permission.");
+        
+    }
+
+    [Fact]
     public async Task AirdropVoucherTests()
     {
         await SetAirdropAdminTests();
@@ -69,5 +99,50 @@ public partial class SchrodingerContractTests
             Account = DefaultAddress
         });
         amount.Value.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task AirdropVoucherTests_Fail()
+    {
+        await SetAirdropAdminTests();
+        
+        var result = await UserSchrodingerContractStub.AirdropVoucher.SendWithExceptionAsync(new AirdropVoucherInput());
+        result.TransactionResult.Error.ShouldContain("Invalid tick.");
+        
+        result = await UserSchrodingerContractStub.AirdropVoucher.SendWithExceptionAsync(new AirdropVoucherInput
+        {
+            Tick = "test"
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid list.");
+        
+        result = await UserSchrodingerContractStub.AirdropVoucher.SendWithExceptionAsync(new AirdropVoucherInput
+        {
+            Tick = "test",
+            List = {  }
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid list.");
+        
+        result = await UserSchrodingerContractStub.AirdropVoucher.SendWithExceptionAsync(new AirdropVoucherInput
+        {
+            Tick = "test",
+            List = { new Address() }
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid amount.");
+        
+        result = await UserSchrodingerContractStub.AirdropVoucher.SendWithExceptionAsync(new AirdropVoucherInput
+        {
+            Tick = "test",
+            List = { new Address() },
+            Amount = 1
+        });
+        result.TransactionResult.Error.ShouldContain("Tick not deployed.");
+        
+        result = await UserSchrodingerContractStub.AirdropVoucher.SendWithExceptionAsync(new AirdropVoucherInput
+        {
+            Tick = _tick,
+            List = { new Address() },
+            Amount = 1
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid address.");
     }
 }

@@ -192,27 +192,6 @@ public partial class SchrodingerContract
         return new Empty();
     }
 
-    public override Empty SetRewardConfig(SetRewardConfigInput input)
-    {
-        Assert(input != null, "Invalid input.");
-        Assert(IsStringValid(input!.Tick), "Invalid tick.");
-        var rewardList = ValidateRewardList(input.Rewards);
-
-        CheckInscriptionExistAndPermission(input.Tick);
-        if (rewardList.Equals(State.RewardListMap[input.Tick])) return new Empty();
-        
-        State.RewardListMap[input.Tick] = rewardList;
-        
-        Context.Fire(new RewardConfigSet
-        {
-            Tick = input.Tick,
-            List = new RewardList{Data = { input.Rewards }},
-            Pool = GetPoolAddress(input.Tick)
-        });
-        
-        return new Empty();
-    }
-
     private void FireRandomAttributeSetLogEvent(AttributeInfo toRemove, AttributeSet attributeSet)
     {
         var logEvent = new RandomAttributeSet();
@@ -262,14 +241,27 @@ public partial class SchrodingerContract
 
     private RewardList ValidateRewardList(RepeatedField<Reward> rewards)
     {
-        Assert(rewards != null && rewards.Count > 0, "Invalid list.");
+        Assert(rewards != null && rewards.Count > 0, "Invalid rewards.");
 
         var rewardList = rewards!.Distinct().ToList();
-        Assert(rewardList.GroupBy(x => x.Name).Any(g => g.Count() <= 1), "List contains duplicate names.");
+        Assert(rewardList.GroupBy(x => x.Name).Any(g => g.Count() <= 1), "Rewards contains duplicate names.");
+
+        foreach (var reward in rewardList)
+        {
+            ValidateReward(reward);
+        }
 
         return new RewardList
         {
             Data = { rewardList }
         };
+    }
+
+    private void ValidateReward(Reward reward)
+    {
+        Assert(reward != null, "Invalid reward.");
+        Assert(IsStringValid(reward!.Name), "Invalid reward name.");
+        Assert(reward.Amount >= 0, "Invalid reward amount.");
+        Assert(reward.Weight >= 0, "Invalid reward weight.");
     }
 }

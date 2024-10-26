@@ -45,7 +45,7 @@ public partial class SchrodingerContract
 
         foreach (var address in list)
         {
-            Assert(IsAddressValid(address), $"Invalid address {address}.");
+            Assert(IsAddressValid(address), "Invalid address.");
             State.AdoptionVoucherMap[input.Tick][address] += input.Amount;
         }
         

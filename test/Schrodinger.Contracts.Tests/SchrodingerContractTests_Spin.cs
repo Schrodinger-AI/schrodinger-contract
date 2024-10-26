@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Contracts.MultiToken;
@@ -40,6 +41,110 @@ public partial class SchrodingerContractTests
         });
         output.List.Data.ShouldBe(rewardList);
         output.Pool.ShouldBe(log.Pool);
+
+        rewardList = new RepeatedField<Reward>
+        {
+            new Reward { Name = "Item2", Amount = 1, Type = RewardType.Point, Weight = 1 },
+            new Reward { Name = "Item2", Amount = 1, Type = RewardType.Point, Weight = 1 }
+        };
+
+        await SchrodingerContractStub.SetRewardConfig.SendAsync(new SetRewardConfigInput
+        {
+            Tick = _tick,
+            Rewards = { rewardList }
+        });
+
+        output = await SchrodingerContractStub.GetRewardConfig.CallAsync(new StringValue
+        {
+            Value = _tick
+        });
+        output.List.Data.Count.ShouldBe(1);
+
+        rewardList = new RepeatedField<Reward>
+        {
+            new Reward { Name = "Item2", Amount = 1, Type = RewardType.Point, Weight = 1 }
+        };
+
+        result = await SchrodingerContractStub.SetRewardConfig.SendAsync(new SetRewardConfigInput
+        {
+            Tick = _tick,
+            Rewards = { rewardList }
+        });
+        result.TransactionResult.Logs.FirstOrDefault(l => l.Name == nameof(RewardConfigSet)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task SetRewardConfigTests_Fail()
+    {
+        await DeployTest();
+
+        var result = await SchrodingerContractStub.SetRewardConfig.SendWithExceptionAsync(new SetRewardConfigInput());
+        result.TransactionResult.Error.ShouldContain("Invalid tick.");
+
+        result = await SchrodingerContractStub.SetRewardConfig.SendWithExceptionAsync(new SetRewardConfigInput
+        {
+            Tick = "test"
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid rewards.");
+
+        result = await SchrodingerContractStub.SetRewardConfig.SendWithExceptionAsync(new SetRewardConfigInput
+        {
+            Tick = "test",
+            Rewards = { }
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid rewards.");
+
+        result = await SchrodingerContractStub.SetRewardConfig.SendWithExceptionAsync(new SetRewardConfigInput
+        {
+            Tick = "test",
+            Rewards = { new Reward() }
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid reward name.");
+
+        result = await SchrodingerContractStub.SetRewardConfig.SendWithExceptionAsync(new SetRewardConfigInput
+        {
+            Tick = "test",
+            Rewards = { new Reward { Name = "Item1", Type = RewardType.Point, Amount = -1 } }
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid reward amount.");
+
+        result = await SchrodingerContractStub.SetRewardConfig.SendWithExceptionAsync(new SetRewardConfigInput
+        {
+            Tick = "test",
+            Rewards = { new Reward { Name = "Item1", Type = RewardType.Point, Amount = 1, Weight = -1 } }
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid reward weight.");
+
+        result = await SchrodingerContractStub.SetRewardConfig.SendWithExceptionAsync(new SetRewardConfigInput
+        {
+            Tick = "test",
+            Rewards =
+            {
+                new Reward { Name = "Item1", Type = RewardType.Point, Amount = 1, Weight = 1 },
+                new Reward { Name = "Item1" }
+            }
+        });
+        result.TransactionResult.Error.ShouldContain("Rewards contains duplicate names.");
+
+        result = await SchrodingerContractStub.SetRewardConfig.SendWithExceptionAsync(new SetRewardConfigInput
+        {
+            Tick = "test",
+            Rewards =
+            {
+                new Reward { Name = "Item1", Type = RewardType.Point, Amount = 1, Weight = 1 }
+            }
+        });
+        result.TransactionResult.Error.ShouldContain("Inscription not found.");
+
+        result = await UserSchrodingerContractStub.SetRewardConfig.SendWithExceptionAsync(new SetRewardConfigInput
+        {
+            Tick = _tick,
+            Rewards =
+            {
+                new Reward { Name = "Item1", Type = RewardType.Point, Amount = 1, Weight = 1 }
+            }
+        });
+        result.TransactionResult.Error.ShouldContain("No permission.");
     }
 
     [Fact]
@@ -194,6 +299,115 @@ public partial class SchrodingerContractTests
     }
 
     [Fact]
+    public async Task SpinTests_Fail()
+    {
+        await DeployTest();
+
+        await SchrodingerContractStub.SetRewardConfig.SendAsync(new SetRewardConfigInput
+        {
+            Tick = _tick,
+            Rewards = { new Reward { Name = "name", Type = RewardType.Point, Amount = 1, Weight = 1 } }
+        });
+
+        var result = await SchrodingerContractStub.Spin.SendWithExceptionAsync(new SpinInput());
+        result.TransactionResult.Error.ShouldContain("Invalid tick.");
+
+        result = await SchrodingerContractStub.Spin.SendWithExceptionAsync(new SpinInput
+        {
+            Tick = "test"
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid seed.");
+
+        result = await SchrodingerContractStub.Spin.SendWithExceptionAsync(new SpinInput
+        {
+            Tick = "test",
+            Seed = new Hash()
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid seed.");
+
+        var seed = HashHelper.ComputeFrom("seed");
+
+        result = await SchrodingerContractStub.Spin.SendWithExceptionAsync(new SpinInput
+        {
+            Tick = "test",
+            Seed = seed
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid expiration time.");
+
+        result = await SchrodingerContractStub.Spin.SendWithExceptionAsync(new SpinInput
+        {
+            Tick = "test",
+            Seed = seed,
+            ExpirationTime = BlockTimeProvider.GetBlockTime().Seconds
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid signature.");
+
+        result = await SchrodingerContractStub.Spin.SendWithExceptionAsync(new SpinInput
+        {
+            Tick = "test",
+            Seed = seed,
+            ExpirationTime = BlockTimeProvider.GetBlockTime().Seconds,
+            Signature = ByteString.Empty
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid signature.");
+
+        result = await SchrodingerContractStub.Spin.SendWithExceptionAsync(new SpinInput
+        {
+            Tick = "test",
+            Seed = seed,
+            ExpirationTime = BlockTimeProvider.GetBlockTime().Seconds,
+            Signature = ByteString.CopyFrom(Hash.Empty.ToByteArray())
+        });
+        result.TransactionResult.Error.ShouldContain("Signature expired.");
+
+        var expirationTime = BlockTimeProvider.GetBlockTime().AddDays(1).Seconds;
+
+        result = await SchrodingerContractStub.Spin.SendWithExceptionAsync(new SpinInput
+        {
+            Tick = "test",
+            Seed = seed,
+            ExpirationTime = expirationTime,
+            Signature = ByteString.CopyFrom(Hash.Empty.ToByteArray())
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid signature.");
+
+        result = await SchrodingerContractStub.Spin.SendWithExceptionAsync(new SpinInput
+        {
+            Tick = "test",
+            Seed = seed,
+            ExpirationTime = expirationTime,
+            Signature = GenerateSignature(UserKeyPair.PrivateKey, "test", seed, expirationTime)
+        });
+        result.TransactionResult.Error.ShouldContain("Signature not valid.");
+
+        var config = await SchrodingerContractStub.GetRewardConfig.CallAsync(new StringValue { Value = _tick });
+
+        await TokenContractStub.Issue.SendAsync(new IssueInput
+        {
+            Amount = 1_00000000,
+            Symbol = $"{_tick}-1",
+            To = config.Pool
+        });
+
+        await SchrodingerContractStub.Spin.SendAsync(new SpinInput
+        {
+            Tick = _tick,
+            Seed = seed,
+            ExpirationTime = expirationTime,
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, _tick, seed, expirationTime)
+        });
+        
+        result = await SchrodingerContractStub.Spin.SendWithExceptionAsync(new SpinInput
+        {
+            Tick = _tick,
+            Seed = seed,
+            ExpirationTime = expirationTime,
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, _tick, seed, expirationTime)
+        });
+        result.TransactionResult.Error.ShouldContain("Signature used.");
+    }
+
+    [Fact]
     public async Task<Hash> AdoptWithVoucherTests()
     {
         var seed = HashHelper.ComputeFrom("Seed");
@@ -257,6 +471,34 @@ public partial class SchrodingerContractTests
     }
 
     [Fact]
+    public async Task AdoptWithVoucherTests_Fail()
+    {
+        await DeployTest();
+
+        var result = await SchrodingerContractStub.AdoptWithVoucher.SendWithExceptionAsync(new AdoptWithVoucherInput());
+        result.TransactionResult.Error.ShouldContain("Invalid tick.");
+
+        result = await SchrodingerContractStub.AdoptWithVoucher.SendWithExceptionAsync(new AdoptWithVoucherInput
+        {
+            Tick = "test"
+        });
+        result.TransactionResult.Error.ShouldContain("Tick not deployed.");
+
+        result = await SchrodingerContractStub.AdoptWithVoucher.SendWithExceptionAsync(new AdoptWithVoucherInput
+        {
+            Tick = _tick
+        });
+        result.TransactionResult.Error.ShouldContain("Voucher not enough.");
+
+        await SchrodingerContractStub.AirdropVoucher.SendAsync(new AirdropVoucherInput
+        {
+            Tick = _tick,
+            List = { DefaultAddress },
+            Amount = 1
+        });
+    }
+
+    [Fact]
     public async Task ConfirmVoucherTests()
     {
         var voucherId = await AdoptWithVoucherTests();
@@ -289,6 +531,64 @@ public partial class SchrodingerContractTests
         confirmed.VoucherInfo.ShouldBe(voucherInfo);
 
         adopted.AdoptId.ShouldBe(voucherInfo.AdoptId);
+    }
+
+    [Fact]
+    public async Task ConfirmVoucherTests_Fail()
+    {
+        var voucherId = await AdoptWithVoucherTests();
+
+        var result = await SchrodingerContractStub.ConfirmVoucher.SendWithExceptionAsync(new ConfirmVoucherInput());
+        result.TransactionResult.Error.ShouldContain("Invalid voucher id.");
+
+        result = await SchrodingerContractStub.ConfirmVoucher.SendWithExceptionAsync(new ConfirmVoucherInput
+        {
+            VoucherId = HashHelper.ComputeFrom("test")
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid signature.");
+
+        result = await SchrodingerContractStub.ConfirmVoucher.SendWithExceptionAsync(new ConfirmVoucherInput
+        {
+            VoucherId = HashHelper.ComputeFrom("test"),
+            Signature = GenerateSignature(UserKeyPair.PrivateKey, HashHelper.ComputeFrom("test"))
+        });
+        result.TransactionResult.Error.ShouldContain("Voucher id not exists.");
+
+        result = await UserSchrodingerContractStub.ConfirmVoucher.SendWithExceptionAsync(new ConfirmVoucherInput
+        {
+            VoucherId = voucherId,
+            Signature = GenerateSignature(UserKeyPair.PrivateKey, HashHelper.ComputeFrom("test"))
+        });
+        result.TransactionResult.Error.ShouldContain("No permission.");
+
+        result = await SchrodingerContractStub.ConfirmVoucher.SendWithExceptionAsync(new ConfirmVoucherInput
+        {
+            VoucherId = voucherId,
+            Signature = GenerateSignature(UserKeyPair.PrivateKey, HashHelper.ComputeFrom("test"))
+        });
+        result.TransactionResult.Error.ShouldContain("Signature not valid.");
+
+        var config = await SchrodingerContractStub.GetRewardConfig.CallAsync(new StringValue { Value = _tick });
+
+        await TokenContractStub.Issue.SendAsync(new IssueInput
+        {
+            Amount = 1_00000000,
+            Symbol = $"{_tick}-1",
+            To = config.Pool
+        });
+
+        await SchrodingerContractStub.ConfirmVoucher.SendAsync(new ConfirmVoucherInput
+        {
+            VoucherId = voucherId,
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, voucherId)
+        });
+
+        result = await SchrodingerContractStub.ConfirmVoucher.SendWithExceptionAsync(new ConfirmVoucherInput
+        {
+            VoucherId = voucherId,
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, voucherId)
+        });
+        result.TransactionResult.Error.ShouldContain("Already confirmed.");
     }
 
     private ByteString GenerateSignature(byte[] privateKey, string tick, Hash seed, long expirationTime)
