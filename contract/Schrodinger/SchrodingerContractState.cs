@@ -67,7 +67,7 @@ public partial class SchrodingerContractState : ContractState
     public MappedState<string, Address, long> AdoptionVoucherMap { get; set; }
     
     // tick -> admin
-    public MappedState<string, Address> AirdropAdminMap { get; set; }
+    public MappedState<string, AddressList> AirdropControllerMap { get; set; }
     
     // tick -> count
     public MappedState<string, long> VoucherIdCountMap { get; set; }

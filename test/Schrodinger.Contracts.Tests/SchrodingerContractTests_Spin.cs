@@ -430,16 +430,6 @@ public partial class SchrodingerContractTests
             Signature = GenerateSignature(DefaultKeyPair.PrivateKey, _tick, seed, expirationTime)
         });
 
-        await TokenContractStub.Issue.SendAsync(new IssueInput
-        {
-            Amount = 1_00000000,
-            Symbol = $"{_tick}-1",
-            To = pool
-        });
-
-        var balance = await GetTokenBalance($"{_tick}-1", pool);
-        balance.ShouldBe(1_00000000);
-
         result = await SchrodingerContractStub.AdoptWithVoucher.SendAsync(new AdoptWithVoucherInput
         {
             Tick = _tick
@@ -463,9 +453,6 @@ public partial class SchrodingerContractTests
                 Account = DefaultAddress
             });
         voucherAmount.Value.ShouldBe(0);
-
-        balance = await GetTokenBalance($"{_tick}-1", pool);
-        balance.ShouldBe(40000000);
 
         return log.VoucherInfo.VoucherId;
     }
@@ -506,16 +493,16 @@ public partial class SchrodingerContractTests
         var voucherInfo = await SchrodingerContractStub.GetVoucherInfo.CallAsync(voucherId);
         voucherInfo.AdoptId.ShouldBeNull();
 
-        var balance = await GetTokenBalance($"{_tick}-1", SchrodingerContractAddress);
-        balance.ShouldBe(0);
-
         var config = await SchrodingerContractStub.GetRewardConfig.CallAsync(new StringValue { Value = _tick });
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
-            Amount = 1_00000000,
+            Amount = 1_60000000,
             Symbol = $"{_tick}-1",
             To = config.Pool
         });
+        
+        var balance = await GetTokenBalance($"{_tick}-1", config.Pool);
+        balance.ShouldBe(1_60000000);
 
         var result = await SchrodingerContractStub.ConfirmVoucher.SendAsync(new ConfirmVoucherInput
         {
@@ -531,6 +518,9 @@ public partial class SchrodingerContractTests
         confirmed.VoucherInfo.ShouldBe(voucherInfo);
 
         adopted.AdoptId.ShouldBe(voucherInfo.AdoptId);
+        
+        balance = await GetTokenBalance($"{_tick}-1", config.Pool);
+        balance.ShouldBe(0);
     }
 
     [Fact]
@@ -572,7 +562,7 @@ public partial class SchrodingerContractTests
 
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
-            Amount = 1_00000000,
+            Amount = 1_60000000,
             Symbol = $"{_tick}-1",
             To = config.Pool
         });

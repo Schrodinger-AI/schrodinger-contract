@@ -1,0 +1,162 @@
+// the version of the language, use proto3 for contracts
+syntax = "proto3";
+
+import "aelf/core.proto";
+import "aelf/options.proto";
+import "acs12.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "schrodinger_contract.proto";
+
+option csharp_namespace = "Schrodinger";
+
+service SchrodingerContractImpl {
+  option (aelf.base) = "acs12.proto";
+  option (aelf.base) = "schrodinger_contract.proto";
+  option (aelf.csharp_state) = "Schrodinger.SchrodingerContractState";
+  
+  // spin
+  rpc SetRewardConfig (SetRewardConfigInput) returns (google.protobuf.Empty) {}
+  rpc GetRewardConfig (google.protobuf.StringValue) returns (GetRewardConfigOutput) {option (aelf.is_view) = true;}
+  rpc Spin (SpinInput) returns (google.protobuf.Empty) {}
+  rpc GetSpinInfo (aelf.Hash) returns (SpinInfo) {option (aelf.is_view) = true;}
+  rpc AdoptWithVoucher (AdoptWithVoucherInput) returns (google.protobuf.Empty) {}
+  rpc GetVoucherInfo (aelf.Hash) returns (VoucherInfo) {option (aelf.is_view) = true;}
+  rpc ConfirmVoucher (ConfirmVoucherInput) returns (google.protobuf.Empty) {}
+  rpc GetAdoptionVoucherAmount (GetAdoptionVoucherAmountInput) returns (google.protobuf.Int64Value) {option (aelf.is_view) = true;}
+  
+  // airdrop
+  rpc AirdropVoucher (AirdropVoucherInput) returns (google.protobuf.Empty) {}
+  rpc GetAirdropController (google.protobuf.StringValue) returns (AddressList) {option (aelf.is_view) = true;}
+  rpc AddAirdropController (AddAirdropControllerInput) returns (google.protobuf.Empty) {}
+  rpc RemoveAirdropController (RemoveAirdropControllerInput) returns (google.protobuf.Empty) {}
+}
+
+message SetRewardConfigInput {
+  string tick = 1;
+  repeated Reward rewards = 2;
+}
+
+message Reward {
+  string name = 1;
+  RewardType type = 2;
+  int64 amount = 3;
+  int64 weight = 4;
+}
+
+enum RewardType {
+  Other = 0;
+  Point = 1;
+  AdoptionVoucher = 2;
+  Token = 3;
+}
+
+message RewardList {
+  repeated Reward data = 1;
+}
+
+message GetRewardConfigOutput {
+  RewardList list = 1;
+  aelf.Address pool = 2;
+}
+
+message SpinInput {
+  string tick = 1;
+  aelf.Hash seed = 2;
+  int64 expiration_time = 3;
+  bytes signature = 10000;
+}
+
+message SpinInfo {
+  aelf.Hash spin_id = 1;
+  string name = 2;
+  RewardType type = 3;
+  int64 amount = 4;
+  aelf.Address account = 5;
+}
+
+message AdoptWithVoucherInput {
+  string tick = 1;
+}
+
+message VoucherInfo {
+  aelf.Hash voucher_id = 1;
+  aelf.Address account = 2;
+  Attributes attributes = 3;
+  string tick = 4;
+  aelf.Hash adopt_id = 5;
+}
+
+message ConfirmVoucherInput {
+  aelf.Hash voucher_id = 1;
+  bytes signature = 10000;
+}
+
+message GetAdoptionVoucherAmountInput {
+  string tick = 1;
+  aelf.Address account = 2;
+}
+
+message AirdropVoucherInput {
+  string tick = 1;
+  repeated aelf.Address list = 2;
+  int64 amount = 3;
+}
+
+message AddressList {
+  repeated aelf.Address data = 1;
+}
+
+message AddAirdropControllerInput {
+  string tick = 1;
+  repeated aelf.Address list = 2;
+}
+
+message RemoveAirdropControllerInput {
+  string tick = 1;
+  repeated aelf.Address list = 2;
+}
+
+// log event
+message RewardConfigSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  RewardList list = 2;
+  aelf.Address pool = 3;
+}
+
+message Spun {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  SpinInfo spin_info = 2;
+  aelf.Hash seed = 3;
+}
+
+message AdoptedWithVoucher {
+  option (aelf.is_event) = true;
+  VoucherInfo voucher_info = 1;
+}
+
+message VoucherConfirmed {
+  option (aelf.is_event) = true;
+  VoucherInfo voucher_info = 1;
+}
+
+message VoucherAirdropped {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  AddressList list = 2;
+  int64 amount = 3;
+}
+
+message AirdropControllerAdded {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  AddressList addresses = 2;
+}
+
+message AirdropControllerRemoved {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  AddressList addresses = 2;
+}

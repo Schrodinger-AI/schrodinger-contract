@@ -19,26 +19,26 @@ public partial class SchrodingerContract
 
         CheckInscriptionExistAndPermission(input.Tick);
         if (rewardList.Equals(State.RewardListMap[input.Tick])) return new Empty();
-        
+
         State.RewardListMap[input.Tick] = rewardList;
-        
+
         Context.Fire(new RewardConfigSet
         {
             Tick = input.Tick,
-            List = new RewardList{Data = { input.Rewards }},
+            List = new RewardList { Data = { input.Rewards } },
             Pool = GetPoolAddress(input.Tick)
         });
-        
+
         return new Empty();
     }
-    
+
     public override Empty Spin(SpinInput input)
     {
         Assert(input != null, "Invalid input.");
         Assert(IsStringValid(input!.Tick), "Invalid tick.");
         Assert(IsHashValid(input.Seed), "Invalid seed.");
         ValidateSignature(input.Signature, input.ExpirationTime);
-        
+
         Assert(
             RecoverAddressFromSignature(ComputeSpinInputHash(input), input.Signature) ==
             State.SignatoryMap[input.Tick], "Signature not valid.");
@@ -99,15 +99,6 @@ public partial class SchrodingerContract
 
         State.VoucherInfoMap[voucherId] = voucherInfo;
 
-        long.TryParse(new BigIntValue(SchrodingerContractConstants.Ten).Pow(inscriptionInfo.Decimals).Value,
-            out var outputAmount);
-
-        CalculateAmountReverse(inscriptionInfo.MaxGenLossRate, inscriptionInfo.CommissionRate, outputAmount,
-            out var lossAmount, out var commissionAmount);
-
-        ProcessAdoptWithVoucherTransfer(lossAmount, commissionAmount, inscriptionInfo.Recipient,
-            inscriptionInfo.Ancestor, GetPoolHash(input.Tick));
-
         Context.Fire(new AdoptedWithVoucher
         {
             VoucherInfo = voucherInfo
@@ -126,7 +117,7 @@ public partial class SchrodingerContract
         Assert(voucherInfo != null, "Voucher id not exists.");
         Assert(voucherInfo!.Account == Context.Sender, "No permission.");
         Assert(voucherInfo.AdoptId == null, "Already confirmed.");
-        
+
         Assert(
             RecoverAddressFromSignature(ComputeConfirmVoucherInputHash(input), input.Signature) ==
             State.SignatoryMap[voucherInfo!.Tick], "Signature not valid.");
@@ -159,7 +150,7 @@ public partial class SchrodingerContract
         long.TryParse(new BigIntValue(SchrodingerContractConstants.Ten).Pow(inscriptionInfo.Decimals).Value,
             out var outputAmount);
 
-        CalculateAmountReverse(inscriptionInfo.LossRate, inscriptionInfo.CommissionRate, outputAmount,
+        CalculateAmountReverse(inscriptionInfo.MaxGenLossRate, inscriptionInfo.CommissionRate, outputAmount,
             out var lossAmount, out var commissionAmount);
 
         adoptInfo.OutputAmount = outputAmount;
@@ -170,12 +161,8 @@ public partial class SchrodingerContract
 
         State.SymbolCountMap[voucherInfo.Tick] = symbolCount.Add(1);
         
-        State.TokenContract.Transfer.VirtualSend(GetPoolHash(voucherInfo.Tick), new TransferInput
-        {
-            To = Context.Self,
-            Symbol = parent,
-            Amount = outputAmount
-        });
+        ProcessAdoptWithVoucherTransfer(lossAmount, commissionAmount, outputAmount, inscriptionInfo.Recipient,
+            inscriptionInfo.Ancestor, voucherInfo.Tick);
 
         Context.Fire(new VoucherConfirmed
         {
@@ -296,7 +283,7 @@ public partial class SchrodingerContract
     {
         return HashHelper.ConcatAndCompute(hash, GetRandomHash());
     }
-    
+
     private Hash ComputeConfirmVoucherInputHash(ConfirmVoucherInput input)
     {
         return HashHelper.ComputeFrom(new ConfirmVoucherInput
@@ -317,9 +304,11 @@ public partial class SchrodingerContract
         lossAmount = lossAmount.Sub(commissionAmount);
     }
 
-    private void ProcessAdoptWithVoucherTransfer(long lossAmount, long commissionAmount, Address recipient,
-        string ancestor, Hash poolHash)
+    private void ProcessAdoptWithVoucherTransfer(long lossAmount, long commissionAmount, long outputAmount,
+        Address recipient, string ancestor, string tick)
     {
+        var poolHash = GetPoolHash(tick);
+
         // transfer ancestor to virtual address
         if (lossAmount > 0)
         {
@@ -341,5 +330,12 @@ public partial class SchrodingerContract
                 Symbol = ancestor
             });
         }
+
+        State.TokenContract.Transfer.VirtualSend(poolHash, new TransferInput
+        {
+            To = Context.Self,
+            Symbol = ancestor,
+            Amount = outputAmount
+        });
     }
 }

@@ -46,6 +46,9 @@
         <ContractStub Include="..\..\protobuf\schrodinger_contract_main.proto">
             <Link>Protobuf\Proto\schrodinger_contract_main.proto</Link>
         </ContractStub>
+        <ContractStub Include="..\..\protobuf\schrodinger_contract_impl.proto">
+            <Link>Protobuf\Proto\schrodinger_contract_impl.proto</Link>
+        </ContractStub>
     </ItemGroup>
 
     <ItemGroup>

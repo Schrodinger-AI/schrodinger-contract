@@ -5,7 +5,7 @@ using Google.Protobuf.WellKnownTypes;
 
 namespace Schrodinger;
 
-public partial class SchrodingerContract : SchrodingerContractContainer.SchrodingerContractBase
+public partial class SchrodingerContract : SchrodingerContractImplContainer.SchrodingerContractImplBase
 {
     public override Empty Initialize(InitializeInput input)
     {
