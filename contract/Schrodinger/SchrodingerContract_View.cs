@@ -187,8 +187,8 @@ public partial class SchrodingerContract
         return output;
     }
 
-    public override Address GetAirdropAdmin(StringValue input)
+    public override AddressList GetAirdropController(StringValue input)
     {
-        return State.AirdropAdminMap[input.Value];
+        return State.AirdropControllerMap[input.Value];
     }
 }

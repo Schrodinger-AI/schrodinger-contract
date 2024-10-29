@@ -41,8 +41,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ContractCode Include="..\..\protobuf\schrodinger_contract.proto">
+        <ContractBase Include="..\..\protobuf\schrodinger_contract.proto">
             <Link>Protobuf\Proto\schrodinger_contract.proto</Link>
+        </ContractBase>
+        <ContractCode Include="..\..\protobuf\schrodinger_contract_impl.proto">
+            <Link>Protobuf\Proto\schrodinger_contract_impl.proto</Link>
         </ContractCode>
     </ItemGroup>
     

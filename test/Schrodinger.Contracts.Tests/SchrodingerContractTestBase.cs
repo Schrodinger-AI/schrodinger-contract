@@ -25,8 +25,8 @@ public class SchrodingerContractTestBase : DAppContractTestBase<SchrodingerContr
     internal Address SchrodingerContractAddress { get; set; }
     internal Address TestPointsContractAddress { get; set; }
 
-    internal SchrodingerContractContainer.SchrodingerContractStub SchrodingerContractStub { get; set; }
-    internal SchrodingerContractContainer.SchrodingerContractStub UserSchrodingerContractStub { get; set; }
+    internal SchrodingerContractImplContainer.SchrodingerContractImplStub SchrodingerContractStub { get; set; }
+    internal SchrodingerContractImplContainer.SchrodingerContractImplStub UserSchrodingerContractStub { get; set; }
     internal TokenContractContainer.TokenContractStub TokenContractStub { get; set; }
     internal TokenContractContainer.TokenContractStub TokenContractUserStub { get; set; }
 
@@ -93,10 +93,10 @@ public class SchrodingerContractTestBase : DAppContractTestBase<SchrodingerContr
 
         SchrodingerContractAddress = Address.Parser.ParseFrom(result.TransactionResult.ReturnValue);
         SchrodingerContractStub =
-            GetContractStub<SchrodingerContractContainer.SchrodingerContractStub>(SchrodingerContractAddress,
+            GetContractStub<SchrodingerContractImplContainer.SchrodingerContractImplStub>(SchrodingerContractAddress,
                 DefaultKeyPair);
         UserSchrodingerContractStub =
-            GetContractStub<SchrodingerContractContainer.SchrodingerContractStub>(SchrodingerContractAddress,
+            GetContractStub<SchrodingerContractImplContainer.SchrodingerContractImplStub>(SchrodingerContractAddress,
                 UserKeyPair);
 
         TokenContractStub =
@@ -115,7 +115,7 @@ public class SchrodingerContractTestBase : DAppContractTestBase<SchrodingerContr
         TestPointsContractAddress = Address.Parser.ParseFrom(result.TransactionResult.ReturnValue);
     }
 
-    internal T GetContractStub<T>(Address contractAddress, ECKeyPair senderKeyPair)
+    private T GetContractStub<T>(Address contractAddress, ECKeyPair senderKeyPair)
         where T : ContractStubBase, new()
     {
         return GetTester<T>(contractAddress, senderKeyPair);
