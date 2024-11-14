@@ -56,6 +56,12 @@ public partial class SchrodingerContract
     {
         return symbol.Split(SchrodingerContractConstants.Separator)[0].ToUpper();
     }
+    
+    private long GetNumberFromSymbol(string symbol)
+    {
+        long.TryParse(symbol.Split(SchrodingerContractConstants.Separator)[1], out var result);
+        return result;
+    }
 
     private InscriptionInfo CheckInscriptionExistAndPermission(string tick)
     {
@@ -70,6 +76,14 @@ public partial class SchrodingerContract
         return State.InscriptionInfoMap[tick] == null
             ? new Address()
             : Context.ConvertVirtualAddressToContractAddress(HashHelper.ComputeFrom(tick));
+    }
+
+    private InscriptionInfo GetInscriptionInfo(string tick)
+    {
+        var inscriptionInfo = State.InscriptionInfoMap[tick];
+        Assert(inscriptionInfo != null, "Inscription not found.");
+        
+        return inscriptionInfo;
     }
 
     #region Deploy

@@ -77,8 +77,7 @@ public partial class SchrodingerContract
         Assert(input != null, "Invalid input.");
         Assert(IsStringValid(input!.Tick), "Invalid tick.");
 
-        var inscriptionInfo = State.InscriptionInfoMap[input.Tick];
-        Assert(inscriptionInfo != null, "Tick not deployed.");
+        var inscriptionInfo = GetInscriptionInfo(input.Tick);
 
         Assert(State.AdoptionVoucherMap[input.Tick][Context.Sender] > 0, "Voucher not enough.");
         State.AdoptionVoucherMap[input.Tick][Context.Sender]--;
@@ -150,8 +149,8 @@ public partial class SchrodingerContract
         long.TryParse(new BigIntValue(SchrodingerContractConstants.Ten).Pow(inscriptionInfo.Decimals).Value,
             out var outputAmount);
 
-        CalculateAmountReverse(inscriptionInfo.MaxGenLossRate, inscriptionInfo.CommissionRate, outputAmount,
-            out var lossAmount, out var commissionAmount);
+        CalculateAmountReverse(voucherInfo.Tick, inscriptionInfo.MaxGenLossRate, inscriptionInfo.CommissionRate,
+            outputAmount, out var lossAmount, out var commissionAmount);
 
         adoptInfo.OutputAmount = outputAmount;
 
@@ -188,6 +187,34 @@ public partial class SchrodingerContract
             TokenName = adoptInfo.TokenName
         });
 
+        return new Empty();
+    }
+
+    public override Empty SetVoucherAdoptionConfig(SetVoucherAdoptionConfigInput input)
+    {
+        Assert(input != null, "Invalid input.");
+        Assert(IsStringValid(input!.Tick), "Invalid tick.");
+        Assert(input.CommissionAmount >= 0, "Invalid commission amount.");
+        Assert(input.PoolAmount >= 0, "Invalid pool amount.");
+        
+        CheckInscriptionExistAndPermission(input.Tick);
+
+        var config = new VoucherAdoptionConfig
+        {
+            CommissionAmount = input.CommissionAmount,
+            PoolAmount = input.PoolAmount
+        };
+
+        if (config.Equals(State.VoucherAdoptionConfigMap[input.Tick])) return new Empty();
+
+        State.VoucherAdoptionConfigMap[input.Tick] = config;
+        
+        Context.Fire(new VoucherAdoptionConfigSet
+        {
+            Tick = input.Tick,
+            Config = config
+        });
+        
         return new Empty();
     }
 
@@ -292,16 +319,25 @@ public partial class SchrodingerContract
         });
     }
 
-    private void CalculateAmountReverse(long lossRate, long commissionRate, long outputAmount, out long lossAmount,
+    private void CalculateAmountReverse(string tick, long lossRate, long commissionRate, long outputAmount, out long lossAmount,
         out long commissionAmount)
     {
-        // calculate amount
-        lossAmount = outputAmount.Div(SchrodingerContractConstants.Denominator.Sub(lossRate)).Mul(lossRate);
+        if (State.VoucherAdoptionConfigMap[tick] == null)
+        {
+            // calculate amount
+            lossAmount = outputAmount.Div(SchrodingerContractConstants.Denominator.Sub(lossRate)).Mul(lossRate);
 
-        commissionAmount = lossAmount.Mul(commissionRate).Div(SchrodingerContractConstants.Denominator);
-        if (commissionAmount == 0 && commissionRate != 0) commissionAmount = 1;
+            commissionAmount = lossAmount.Mul(commissionRate).Div(SchrodingerContractConstants.Denominator);
+            if (commissionAmount == 0 && commissionRate != 0) commissionAmount = 1;
 
-        lossAmount = lossAmount.Sub(commissionAmount);
+            lossAmount = lossAmount.Sub(commissionAmount);
+        }
+        else
+        {
+            var config = State.VoucherAdoptionConfigMap[tick];
+            lossAmount = config.PoolAmount;
+            commissionAmount = config.CommissionAmount;
+        }
     }
 
     private void ProcessAdoptWithVoucherTransfer(long lossAmount, long commissionAmount, long outputAmount,
@@ -331,11 +367,16 @@ public partial class SchrodingerContract
             });
         }
 
+        var config = State.RerollConfigMap[tick];
+        var amount = config != null
+            ? outputAmount.Mul(config.Rate).Div(SchrodingerContractConstants.Denominator)
+            : outputAmount;
+        
         State.TokenContract.Transfer.VirtualSend(poolHash, new TransferInput
         {
             To = Context.Self,
             Symbol = ancestor,
-            Amount = outputAmount
+            Amount = amount
         });
     }
 }

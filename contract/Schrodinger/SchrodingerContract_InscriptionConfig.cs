@@ -192,6 +192,34 @@ public partial class SchrodingerContract
         return new Empty();
     }
 
+    public override Empty SetRerollConfig(SetRerollConfigInput input)
+    {
+        Assert(input != null, "Invalid input.");
+        Assert(IsStringValid(input!.Tick), "Invalid tick.");
+        Assert(input.Rate >= 0, "Invalid rate.");
+        Assert(input.Index > 0, "Invalid index.");
+
+        CheckInscriptionExistAndPermission(input.Tick);
+
+        var config = new RerollConfig
+        {
+            Rate = input.Rate,
+            Index = input.Index
+        };
+
+        if (config.Equals(State.RerollConfigMap[input.Tick])) return new Empty();
+
+        State.RerollConfigMap[input.Tick] = config;
+
+        Context.Fire(new RerollConfigSet
+        {
+            Tick = input.Tick,
+            Config = config
+        });
+
+        return new Empty();
+    }
+
     private void FireRandomAttributeSetLogEvent(AttributeInfo toRemove, AttributeSet attributeSet)
     {
         var logEvent = new RandomAttributeSet();

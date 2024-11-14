@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using AElf;
+using AElf.Types;
 using Google.Protobuf.WellKnownTypes;
 using Shouldly;
 using Xunit;
@@ -30,12 +31,12 @@ public partial class SchrodingerContractTests
         {
             Value = 2
         });
-        
+
         await SchrodingerContractStub.SetImageMaxSize.SendAsync(new Int64Value
         {
             Value = 2
         });
-        
+
         await SchrodingerContractStub.SetImageMaxCount.SendAsync(new Int64Value
         {
             Value = 2
@@ -149,11 +150,73 @@ public partial class SchrodingerContractTests
             Value = 100
         });
         SchrodingerMainContractStub.GetImageMaxSize.CallAsync(new Empty()).Result.Value.ShouldBe(100);
-        
+
         await SchrodingerMainContractStub.SetSchrodingerContractAddress.SendAsync(UserAddress);
         SchrodingerMainContractStub.GetSchrodingerContractAddress.CallAsync(new Empty()).Result.ShouldBe(UserAddress);
-        
+
         await SchrodingerMainContractStub.SetAdmin.SendAsync(UserAddress);
         SchrodingerMainContractStub.GetAdmin.CallAsync(new Empty()).Result.ShouldBe(UserAddress);
+    }
+
+    [Fact]
+    public async Task SetRerollConfigTests()
+    {
+        await DeployTest();
+
+        var result = await SchrodingerContractStub.SetRerollConfig.SendAsync(new SetRerollConfigInput
+        {
+            Tick = _tick,
+            Index = 3,
+            Rate = 5000
+        });
+
+        result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
+
+        var log = GetLogEvent<RerollConfigSet>(result.TransactionResult);
+        log.Tick.ShouldBe(_tick);
+        log.Config.Index.ShouldBe(3);
+        log.Config.Rate.ShouldBe(5000);
+
+        var config = await SchrodingerContractStub.GetRerollConfig.CallAsync(new StringValue { Value = _tick });
+        config.ShouldBe(log.Config);
+    }
+
+    [Fact]
+    public async Task SetRerollConfigTests_Fail()
+    {
+        await DeployTest();
+
+        var result = await SchrodingerContractStub.SetRerollConfig.SendWithExceptionAsync(new SetRerollConfigInput());
+        result.TransactionResult.Error.ShouldContain("Invalid tick.");
+
+        result = await SchrodingerContractStub.SetRerollConfig.SendWithExceptionAsync(new SetRerollConfigInput
+        {
+            Tick = "test",
+            Rate = -1
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid rate.");
+
+        result = await SchrodingerContractStub.SetRerollConfig.SendWithExceptionAsync(new SetRerollConfigInput
+        {
+            Tick = "test",
+            Rate = 0
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid index.");
+
+        result = await SchrodingerContractStub.SetRerollConfig.SendWithExceptionAsync(new SetRerollConfigInput
+        {
+            Tick = "test",
+            Rate = 0,
+            Index = 1
+        });
+        result.TransactionResult.Error.ShouldContain("Inscription not found.");
+
+        result = await UserSchrodingerContractStub.SetRerollConfig.SendWithExceptionAsync(new SetRerollConfigInput
+        {
+            Tick = _tick,
+            Rate = 0,
+            Index = 1
+        });
+        result.TransactionResult.Error.ShouldContain("No permission.");
     }
 }

@@ -396,7 +396,7 @@ public partial class SchrodingerContractTests
             ExpirationTime = expirationTime,
             Signature = GenerateSignature(DefaultKeyPair.PrivateKey, _tick, seed, expirationTime)
         });
-        
+
         result = await SchrodingerContractStub.Spin.SendWithExceptionAsync(new SpinInput
         {
             Tick = _tick,
@@ -469,7 +469,7 @@ public partial class SchrodingerContractTests
         {
             Tick = "test"
         });
-        result.TransactionResult.Error.ShouldContain("Tick not deployed.");
+        result.TransactionResult.Error.ShouldContain("Inscription not found.");
 
         result = await SchrodingerContractStub.AdoptWithVoucher.SendWithExceptionAsync(new AdoptWithVoucherInput
         {
@@ -500,7 +500,7 @@ public partial class SchrodingerContractTests
             Symbol = $"{_tick}-1",
             To = config.Pool
         });
-        
+
         var balance = await GetTokenBalance($"{_tick}-1", config.Pool);
         balance.ShouldBe(1_60000000);
 
@@ -518,7 +518,7 @@ public partial class SchrodingerContractTests
         confirmed.VoucherInfo.ShouldBe(voucherInfo);
 
         adopted.AdoptId.ShouldBe(voucherInfo.AdoptId);
-        
+
         balance = await GetTokenBalance($"{_tick}-1", config.Pool);
         balance.ShouldBe(0);
     }
@@ -579,6 +579,93 @@ public partial class SchrodingerContractTests
             Signature = GenerateSignature(DefaultKeyPair.PrivateKey, voucherId)
         });
         result.TransactionResult.Error.ShouldContain("Already confirmed.");
+    }
+
+    [Fact]
+    public async Task SetVoucherAdoptionConfigTests()
+    {
+        var voucherId = await AdoptWithVoucherTests();
+
+        var result = await SchrodingerContractStub.SetVoucherAdoptionConfig.SendAsync(new SetVoucherAdoptionConfigInput
+        {
+            Tick = _tick,
+            CommissionAmount = 25000000,
+            PoolAmount = 25000000
+        });
+        result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
+
+        var log = GetLogEvent<VoucherAdoptionConfigSet>(result.TransactionResult);
+        log.Tick.ShouldBe(_tick);
+        log.Config.CommissionAmount.ShouldBe(25000000);
+        log.Config.PoolAmount.ShouldBe(25000000);
+
+        var output =
+            await SchrodingerContractStub.GetVoucherAdoptionConfig.CallAsync(new StringValue { Value = _tick });
+        output.ShouldBe(log.Config);
+
+        var config = await SchrodingerContractStub.GetRewardConfig.CallAsync(new StringValue { Value = _tick });
+        await TokenContractStub.Issue.SendAsync(new IssueInput
+        {
+            Amount = 1_50000000,
+            Symbol = $"{_tick}-1",
+            To = config.Pool
+        });
+
+        var balance = await GetTokenBalance($"{_tick}-1", config.Pool);
+        balance.ShouldBe(1_50000000);
+
+        result = await SchrodingerContractStub.ConfirmVoucher.SendAsync(new ConfirmVoucherInput
+        {
+            VoucherId = voucherId,
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, voucherId)
+        });
+
+        var adopted = GetLogEvent<Adopted>(result.TransactionResult);
+        adopted.LossAmount.ShouldBe(25000000);
+        adopted.CommissionAmount.ShouldBe(25000000);
+
+        balance = await GetTokenBalance($"{_tick}-1", config.Pool);
+        balance.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task SetVoucherAdoptionConfigTests_Fail()
+    {
+        await DeployTest();
+
+        var result = await SchrodingerContractStub.SetVoucherAdoptionConfig.SendWithExceptionAsync(
+            new SetVoucherAdoptionConfigInput());
+        result.TransactionResult.Error.ShouldContain("Invalid tick.");
+
+        result = await SchrodingerContractStub.SetVoucherAdoptionConfig.SendWithExceptionAsync(
+            new SetVoucherAdoptionConfigInput
+            {
+                Tick = "test",
+                CommissionAmount = -1
+            });
+        result.TransactionResult.Error.ShouldContain("Invalid commission amount.");
+
+        result = await SchrodingerContractStub.SetVoucherAdoptionConfig.SendWithExceptionAsync(
+            new SetVoucherAdoptionConfigInput
+            {
+                Tick = "test",
+                PoolAmount = -1
+            });
+        result.TransactionResult.Error.ShouldContain("Invalid pool amount.");
+
+        result = await SchrodingerContractStub.SetVoucherAdoptionConfig.SendWithExceptionAsync(
+            new SetVoucherAdoptionConfigInput
+            {
+                Tick = "test"
+            });
+        result.TransactionResult.Error.ShouldContain("Inscription not found.");
+
+        result = await UserSchrodingerContractStub.SetVoucherAdoptionConfig.SendWithExceptionAsync(
+            new SetVoucherAdoptionConfigInput
+            {
+                Tick = _tick
+            });
+        result.TransactionResult.Error.ShouldContain("No permission.");
     }
 
     private ByteString GenerateSignature(byte[] privateKey, string tick, Hash seed, long expirationTime)

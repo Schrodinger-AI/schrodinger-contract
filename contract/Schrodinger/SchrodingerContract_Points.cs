@@ -166,7 +166,7 @@ public partial class SchrodingerContract
         var proportion = State.PointsProportion[actionName];
         proportion = actionName switch
         {
-            nameof(Adopt) => proportion == 0 ? SchrodingerContractConstants.DefaultAdoptProportion : proportion,
+            "Adopt" => proportion == 0 ? SchrodingerContractConstants.DefaultAdoptProportion : proportion,
             nameof(Reroll) => proportion == 0 ? SchrodingerContractConstants.DefaultRerollProportion : proportion,
             nameof(AdoptMaxGen) => proportion == 0 ? SchrodingerContractConstants.DefaultAdoptMaxGenProportion : proportion,
             _ => proportion == 0 ? SchrodingerContractConstants.DefaultProportion : proportion

@@ -210,7 +210,7 @@ public partial class SchrodingerContractTests
             List = { new Address() },
             Amount = 1
         });
-        result.TransactionResult.Error.ShouldContain("Tick not deployed.");
+        result.TransactionResult.Error.ShouldContain("Inscription not found.");
 
         result = await UserSchrodingerContractStub.AirdropVoucher.SendWithExceptionAsync(new AirdropVoucherInput
         {
