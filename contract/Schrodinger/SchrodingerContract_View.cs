@@ -191,4 +191,51 @@ public partial class SchrodingerContract
     {
         return State.AirdropControllerMap[input.Value];
     }
+
+    public override RerollConfig GetRerollConfig(StringValue input)
+    {
+        return input != null && IsStringValid(input.Value) ? State.RerollConfigMap[input.Value] : new RerollConfig();
+    }
+
+    public override GetMergeConfigOutput GetMergeConfig(StringValue input)
+    {
+        if (input == null || !IsStringValid(input.Value)) return new GetMergeConfigOutput();
+
+        var output = new GetMergeConfigOutput
+        {
+            Tick = input.Value,
+            MaximumLevel = State.MaximumLevelMap[input.Value],
+            Config = State.MergeConfigMap[input.Value]
+        };
+        
+        var mergeRates = new MergeRates();
+
+        for (var i = 1; i <= output.MaximumLevel; i++)
+        {
+            mergeRates.Data.Add(new MergeRate
+            {
+                Level = i,
+                Rate = State.MergeRatesMap[output.Tick][i]
+            });
+        }
+
+        output.MergeRates = mergeRates;
+        
+        return output;
+    }
+
+    public override VoucherAdoptionConfig GetVoucherAdoptionConfig(StringValue input)
+    {
+        return input != null && IsStringValid(input.Value)
+            ? State.VoucherAdoptionConfigMap[input.Value]
+            : new VoucherAdoptionConfig();
+    }
+
+    public override Int64Value GetSymbolCount(StringValue input)
+    {
+        return new Int64Value
+        {
+            Value = State.SymbolCountMap[input.Value]
+        };
+    }
 }

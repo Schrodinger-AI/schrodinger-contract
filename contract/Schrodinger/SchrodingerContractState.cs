@@ -71,4 +71,19 @@ public partial class SchrodingerContractState : ContractState
     
     // tick -> count
     public MappedState<string, long> VoucherIdCountMap { get; set; }
+    
+    // tick -> config
+    public MappedState<string, RerollConfig> RerollConfigMap { get; set; }
+    
+    // tick -> MergeConfig
+    public MappedState<string, MergeConfig> MergeConfigMap { get; set; }
+    
+    // tick -> level -> rate
+    public MappedState<string, long, long> MergeRatesMap { get; set; }
+
+    // tick -> maximumLevel
+    public MappedState<string, long> MaximumLevelMap { get; set; }
+    
+    // tick -> VoucherAdoptionConfig
+    public MappedState<string, VoucherAdoptionConfig> VoucherAdoptionConfigMap { get; set; }
 }

@@ -15,12 +15,12 @@ service SchrodingerContract {
   // core
   rpc Initialize(InitializeInput) returns (google.protobuf.Empty) {}
   rpc Deploy (DeployInput) returns (google.protobuf.Empty) {}
-  rpc Adopt (AdoptInput) returns (google.protobuf.Empty) {}
+//  rpc Adopt (AdoptInput) returns (google.protobuf.Empty) {}
   rpc Confirm (ConfirmInput) returns (google.protobuf.Empty) {}
   rpc Reroll (RerollInput) returns (google.protobuf.Empty) {}
   rpc AdoptMaxGen (AdoptMaxGenInput) returns (google.protobuf.Empty) {}
   rpc RerollAdoption (aelf.Hash) returns (google.protobuf.Empty) {}
-  rpc UpdateAdoption (aelf.Hash) returns (google.protobuf.Empty) {}
+//  rpc UpdateAdoption (aelf.Hash) returns (google.protobuf.Empty) {}
 
   // token
   rpc SetFixedAttribute (SetAttributeInput) returns (google.protobuf.Empty) {}
@@ -41,6 +41,7 @@ service SchrodingerContract {
   rpc GetAttributeValues (GetAttributeValuesInput) returns (AttributeInfos) {option (aelf.is_view) = true;}
   rpc GetAdoptInfo (aelf.Hash) returns (AdoptInfo) {option (aelf.is_view) = true;}
   rpc GetTokenInfo (google.protobuf.StringValue) returns (GetTokenInfoOutput) {option (aelf.is_view) = true;}
+  rpc GetSymbolCount (google.protobuf.StringValue) returns (google.protobuf.Int64Value) {option (aelf.is_view) = true;}
 
   // contract
   rpc SetConfig (Config) returns (google.protobuf.Empty) {}
@@ -192,6 +193,7 @@ message AdoptInfo {
   bool is_confirmed = 14;
   bool is_rerolled = 15;
   bool is_updated = 16;
+  int64 level = 17;
 }
 
 message Attributes {

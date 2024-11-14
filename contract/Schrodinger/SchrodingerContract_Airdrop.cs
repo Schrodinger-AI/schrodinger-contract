@@ -16,8 +16,7 @@ public partial class SchrodingerContract
         Assert(input.List != null && input.List.Count > 0, "Invalid list.");
         Assert(input.Amount > 0, "Invalid amount.");
 
-        var inscriptionInfo = State.InscriptionInfoMap[input.Tick];
-        Assert(inscriptionInfo != null, "Tick not deployed.");
+        var inscriptionInfo = GetInscriptionInfo(input.Tick);
 
         var controller = State.AirdropControllerMap[input.Tick];
         Assert(

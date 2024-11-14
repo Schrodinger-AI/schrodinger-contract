@@ -24,12 +24,24 @@ service SchrodingerContractImpl {
   rpc GetVoucherInfo (aelf.Hash) returns (VoucherInfo) {option (aelf.is_view) = true;}
   rpc ConfirmVoucher (ConfirmVoucherInput) returns (google.protobuf.Empty) {}
   rpc GetAdoptionVoucherAmount (GetAdoptionVoucherAmountInput) returns (google.protobuf.Int64Value) {option (aelf.is_view) = true;}
-  
+  rpc SetVoucherAdoptionConfig (SetVoucherAdoptionConfigInput) returns (google.protobuf.Empty) {}
+  rpc GetVoucherAdoptionConfig (google.protobuf.StringValue) returns (VoucherAdoptionConfig) {option (aelf.is_view) = true;}
+
   // airdrop
   rpc AirdropVoucher (AirdropVoucherInput) returns (google.protobuf.Empty) {}
   rpc GetAirdropController (google.protobuf.StringValue) returns (AddressList) {option (aelf.is_view) = true;}
   rpc AddAirdropController (AddAirdropControllerInput) returns (google.protobuf.Empty) {}
   rpc RemoveAirdropController (RemoveAirdropControllerInput) returns (google.protobuf.Empty) {}
+  
+  // reroll
+  rpc SetRerollConfig (SetRerollConfigInput) returns (google.protobuf.Empty) {}
+  rpc GetRerollConfig (google.protobuf.StringValue) returns (RerollConfig) {option (aelf.is_view) = true;}
+  
+  // merge
+  rpc SetMergeConfig (SetMergeConfigInput) returns (google.protobuf.Empty) {}
+  rpc GetMergeConfig (google.protobuf.StringValue) returns (GetMergeConfigOutput) {option (aelf.is_view) = true;}
+  rpc SetMergeRatesConfig (SetMergeRatesConfigInput) returns (google.protobuf.Empty) {}
+  rpc Merge (MergeInput) returns (google.protobuf.Empty) {}
 }
 
 message SetRewardConfigInput {
@@ -97,6 +109,17 @@ message GetAdoptionVoucherAmountInput {
   aelf.Address account = 2;
 }
 
+message SetVoucherAdoptionConfigInput {
+  string tick = 1;
+  int64 commission_amount = 2;
+  int64 pool_amount = 3;
+}
+
+message VoucherAdoptionConfig {
+  int64 commission_amount = 1;
+  int64 pool_amount = 2;
+}
+
 message AirdropVoucherInput {
   string tick = 1;
   repeated aelf.Address list = 2;
@@ -115,6 +138,58 @@ message AddAirdropControllerInput {
 message RemoveAirdropControllerInput {
   string tick = 1;
   repeated aelf.Address list = 2;
+}
+
+message RerollConfig {
+  int64 rate = 1;
+  int64 index = 2;
+}
+
+message SetRerollConfigInput {
+  string tick = 1;
+  int64 rate = 2;
+  int64 index = 3;
+}
+
+message MergeRates {
+  repeated MergeRate data = 1;
+}
+
+message MergeRate {
+  int64 level = 1;
+  int64 rate = 2;
+}
+
+message SetMergeRatesConfigInput {
+  string tick = 1;
+  repeated MergeRate merge_rates = 2;
+  int64 maximum_level = 3;
+}
+
+message SetMergeConfigInput {
+  string tick = 1;
+  int64 commission_amount = 2;
+  int64 pool_amount = 3;
+}
+
+message MergeConfig {
+  int64 commission_amount = 1;
+  int64 pool_amount = 2;
+}
+
+message GetMergeConfigOutput {
+  string tick = 1;
+  MergeConfig config = 2;
+  MergeRates merge_rates = 3;
+  int64 maximum_level = 4;
+}
+
+message MergeInput {
+  string tick = 1;
+  aelf.Hash adopt_id_a = 2;
+  aelf.Hash adopt_id_b = 3;
+  int64 level = 4;
+  bytes signature = 10000;
 }
 
 // log event
@@ -159,4 +234,43 @@ message AirdropControllerRemoved {
   option (aelf.is_event) = true;
   string tick = 1;
   AddressList addresses = 2;
+}
+
+message RerollConfigSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  RerollConfig config = 2;
+}
+
+message MergeRatesConfigSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  MergeRates merge_rates = 2;
+  int64 maximum_level = 3;
+}
+
+message MergeConfigSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  MergeConfig config = 2;
+}
+
+message Merged {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  aelf.Hash adopt_id_a = 2;
+  aelf.Hash adopt_id_b = 3;
+  string symbol_a = 4;
+  string symbol_b = 5;
+  int64 amount_a = 6;
+  int64 amount_b = 7;
+  AdoptInfo adopt_info = 8;
+  int64 loss_amount = 9;
+  int64 commission_amount = 10;
+}
+
+message VoucherAdoptionConfigSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  VoucherAdoptionConfig config = 2;
 }
