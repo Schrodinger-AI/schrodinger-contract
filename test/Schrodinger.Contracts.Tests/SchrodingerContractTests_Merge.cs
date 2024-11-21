@@ -6,6 +6,7 @@ using AElf.Cryptography;
 using AElf.Types;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Shouldly;
 using Xunit;
 
@@ -526,17 +527,6 @@ public partial class SchrodingerContractTests
         });
         result.TransactionResult.Error.ShouldContain("already rerolled.");
         
-        // adoptIdA = await AdoptTest();
-        // result = await SchrodingerContractStub.Merge.SendWithExceptionAsync(new MergeInput
-        // {
-        //     Tick = _tick,
-        //     AdoptIdA = adoptId,
-        //     AdoptIdB = adoptIdA,
-        //     Level = 1,
-        //     Signature = GenerateSignature(DefaultKeyPair.PrivateKey, _tick, adoptId, adoptIdA, 1)
-        // });
-        // result.TransactionResult.Error.ShouldContain("not reach max generation.");
-        
         adoptIdA = await AdoptMaxGen();
         result = await UserSchrodingerContractStub.Merge.SendWithExceptionAsync(new MergeInput
         {
@@ -568,6 +558,167 @@ public partial class SchrodingerContractTests
             Signature = GenerateSignature(DefaultKeyPair.PrivateKey, _tick, adoptId, adoptIdB, 1)
         });
         result.TransactionResult.Error.ShouldContain("Level not matched.");
+    }
+
+    [Fact]
+    public async Task RedeemTests()
+    {
+        await PrepareForMergeTests();
+
+        // cat box
+        {
+            var adoptId = await AdoptMaxGen();
+
+            var pool = await SchrodingerContractStub.GetReceivingAddress.CallAsync(new StringValue { Value = _tick });
+            var balance = await GetTokenBalance($"{_tick}-1", pool);
+            balance.ShouldBeGreaterThan(0);
+
+            var adoptInfo = await SchrodingerContractStub.GetAdoptInfo.CallAsync(adoptId);
+
+            var result = await SchrodingerContractStub.Redeem.SendAsync(new RedeemInput
+            {
+                Tick = _tick,
+                AdoptId = adoptId,
+                Level = 4,
+                Signature = GenerateRedeemSignature(DefaultKeyPair.PrivateKey, _tick, adoptId, 4)
+            });
+            result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
+
+            var log = GetLogEvent<Redeemed>(result.TransactionResult);
+            log.Tick.ShouldBe(_tick);
+            log.AdoptId.ShouldBe(adoptId);
+            log.Level.ShouldBe(4);
+            log.Account.ShouldBe(DefaultAddress);
+            log.Amount.ShouldBe(adoptInfo.OutputAmount);
+            log.Symbol.ShouldBe(adoptInfo.Symbol);
+        
+            adoptInfo = await SchrodingerContractStub.GetAdoptInfo.CallAsync(adoptId);
+            adoptInfo.OutputAmount.ShouldBe(0);
+        
+            balance = await GetTokenBalance($"{_tick}-1", pool);
+            balance.ShouldBe(0);
+        }
+        
+        // nft
+        {
+            var adoptId = await AdoptMaxGen();
+            await SchrodingerContractStub.Confirm.SendAsync(new ConfirmInput
+            {
+                AdoptId = adoptId,
+                Image = "img",
+                ImageUri = "uri",
+                Signature = GenerateSignature(DefaultKeyPair.PrivateKey, adoptId, "img", "uri")
+            });
+            
+            var balance = await GetTokenBalance($"{_tick}-3", DefaultAddress);
+            balance.ShouldBeGreaterThan(0);
+
+            await TokenContractStub.Approve.SendAsync(new ApproveInput
+            {
+                Spender = SchrodingerContractAddress,
+                Amount = balance,
+                Symbol = $"{_tick}-3"
+            });
+            
+            var result = await SchrodingerContractStub.Redeem.SendAsync(new RedeemInput
+            {
+                Tick = _tick,
+                AdoptId = adoptId,
+                Level = 4,
+                Signature = GenerateRedeemSignature(DefaultKeyPair.PrivateKey, _tick, adoptId, 4)
+            });
+            result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
+
+            var log = GetLogEvent<Redeemed>(result.TransactionResult);
+            log.Tick.ShouldBe(_tick);
+            log.AdoptId.ShouldBe(adoptId);
+            log.Level.ShouldBe(4);
+            log.Account.ShouldBe(DefaultAddress);
+            log.Amount.ShouldBe(balance);
+            
+            balance = await GetTokenBalance($"{_tick}-3", DefaultAddress);
+            balance.ShouldBe(0);
+        }
+    }
+
+    [Fact]
+    public async Task RedeemTests_Fail()
+    {
+        await PrepareForMergeTests();
+        var adoptId = await AdoptMaxGen();
+
+        var result = await SchrodingerContractStub.Redeem.SendWithExceptionAsync(new RedeemInput());
+        result.TransactionResult.Error.ShouldContain("Invalid tick.");
+        
+        result = await SchrodingerContractStub.Redeem.SendWithExceptionAsync(new RedeemInput
+        {
+            Tick = "test"
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid adopt id.");
+        
+        result = await SchrodingerContractStub.Redeem.SendWithExceptionAsync(new RedeemInput
+        {
+            Tick = "test",
+            AdoptId = HashHelper.ComputeFrom("test")
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid level.");
+        
+        result = await SchrodingerContractStub.Redeem.SendWithExceptionAsync(new RedeemInput
+        {
+            Tick = "test",
+            AdoptId = HashHelper.ComputeFrom("test"),
+            Level = 1
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid signature.");
+        
+        result = await SchrodingerContractStub.Redeem.SendWithExceptionAsync(new RedeemInput
+        {
+            Tick = "test",
+            AdoptId = HashHelper.ComputeFrom("test"),
+            Level = 1,
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, "test", HashHelper.ComputeFrom("test"), 1)
+        });
+        result.TransactionResult.Error.ShouldContain("Invalid signature.");
+        
+        result = await SchrodingerContractStub.Redeem.SendWithExceptionAsync(new RedeemInput
+        {
+            Tick = _tick,
+            AdoptId = HashHelper.ComputeFrom("test"),
+            Level = 1,
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, _tick, HashHelper.ComputeFrom("test"), 1)
+        });
+        result.TransactionResult.Error.ShouldContain("Adopt id not found.");
+
+        await SchrodingerContractStub.RerollAdoption.SendAsync(adoptId);
+        
+        result = await SchrodingerContractStub.Redeem.SendWithExceptionAsync(new RedeemInput
+        {
+            Tick = _tick,
+            AdoptId = adoptId,
+            Level = 1,
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, _tick, adoptId, 1)
+        });
+        result.TransactionResult.Error.ShouldContain("Already rerolled.");
+        
+        adoptId = await AdoptMaxGen();
+        
+        result = await SchrodingerContractStub.Redeem.SendWithExceptionAsync(new RedeemInput
+        {
+            Tick = _tick,
+            AdoptId = adoptId,
+            Level = 1,
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, _tick, adoptId, 1)
+        });
+        result.TransactionResult.Error.ShouldContain("Not reach target level.");
+        
+        result = await UserSchrodingerContractStub.Redeem.SendWithExceptionAsync(new RedeemInput
+        {
+            Tick = _tick,
+            AdoptId = adoptId,
+            Level = 4,
+            Signature = GenerateSignature(DefaultKeyPair.PrivateKey, _tick, adoptId, 4)
+        });
+        result.TransactionResult.Error.ShouldContain("No permission to redeem.");
     }
 
     private async Task PrepareForMergeTests()
@@ -645,29 +796,16 @@ public partial class SchrodingerContractTests
         return log.AdoptId;
     }
     
-    // private async Task<Hash> AdoptTest()
-    // {
-    //     await TokenContractStub.Issue.SendAsync(new IssueInput
-    //     {
-    //         Symbol = Gen0,
-    //         Amount = 2_00000000,
-    //         To = DefaultAddress
-    //     });
-    //
-    //     await TokenContractStub.Approve.SendAsync(new ApproveInput
-    //     {
-    //         Symbol = Gen0,
-    //         Amount = 2_00000000,
-    //         Spender = SchrodingerContractAddress
-    //     });
-    //
-    //     var result = await SchrodingerContractStub.Adopt.SendAsync(new AdoptInput
-    //     {
-    //         Parent = Gen0,
-    //         Amount = 2_00000000,
-    //         Domain = "test"
-    //     });
-    //
-    //     return GetLogEvent<Adopted>(result.TransactionResult).AdoptId;
-    // }
+    private ByteString GenerateRedeemSignature(byte[] privateKey, string tick, Hash adoptId, long level)
+    {
+        var data = new RedeemInput
+        {
+            Tick = tick,
+            AdoptId = adoptId,
+            Level = level
+        };
+        var dataHash = HashHelper.ComputeFrom(data);
+        var signature = CryptoHelper.SignWithPrivateKey(privateKey, dataHash.ToByteArray());
+        return ByteStringHelper.FromHexString(signature.ToHex());
+    }
 }

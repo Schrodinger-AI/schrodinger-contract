@@ -111,6 +111,75 @@ public partial class SchrodingerContract
         return new Empty();
     }
 
+    public override Empty Redeem(RedeemInput input)
+    {
+        Assert(input != null, "Invalid input.");
+        Assert(IsStringValid(input!.Tick), "Invalid tick.");
+        Assert(IsHashValid(input.AdoptId), "Invalid adopt id.");
+        Assert(input.Level > 0, "Invalid level.");
+        Assert(!input.Signature.IsNullOrEmpty(), "Invalid signature.");
+
+        Assert(
+            RecoverAddressFromSignature(ComputeRedeemInputHash(input), input.Signature) ==
+            State.SignatoryMap[input.Tick], "Invalid signature.");
+
+        var inscriptionInfo = State.InscriptionInfoMap[input.Tick];
+        
+        var adoptInfo = State.AdoptInfoMap[input.AdoptId];
+        Assert(adoptInfo != null, "Adopt id not found.");
+        Assert(!adoptInfo!.IsRerolled, "Already rerolled.");
+        Assert(adoptInfo.Level == 0 || adoptInfo.Level == input.Level, "Level not matched.");
+        Assert(adoptInfo.Gen == inscriptionInfo.MaxGen, "Not reach max generation.");
+        Assert(adoptInfo.OutputAmount > 0, "Output amount should not be zero.");
+        Assert(GetTickFromSymbol(adoptInfo.Symbol) == input.Tick, "Tick not matched.");
+        Assert(input.Level == State.MaximumLevelMap[input.Tick].Add(1), "Not reach target level.");
+        
+        var outputAmount = adoptInfo.OutputAmount;
+        
+        adoptInfo.Level = input.Level;
+        
+        if (adoptInfo.IsConfirmed)
+        {
+            var amount = State.TokenContract.GetBalance.Call(new GetBalanceInput
+                { Owner = Context.Sender, Symbol = adoptInfo.Symbol }).Balance;
+            Assert(amount == adoptInfo.OutputAmount, "Amount not enough to redeem.");
+
+            State.TokenContract.TransferFrom.Send(new TransferFromInput
+                { From = Context.Sender, Amount = amount, To = Context.Self, Symbol = adoptInfo.Symbol });
+            State.TokenContract.Burn.Send(new BurnInput{Symbol = adoptInfo.Symbol, Amount = amount});
+        }
+        else
+        {
+            Assert(adoptInfo.Adopter == Context.Sender, "No permission to redeem.");
+            adoptInfo.OutputAmount = 0;
+        }
+
+        var reward = State.TokenContract.GetBalance.Call(new GetBalanceInput
+        {
+            Symbol = inscriptionInfo.Ancestor,
+            Owner = GetReceivingAddress(input.Tick)
+        }).Balance;
+        
+        State.TokenContract.Transfer.VirtualSend(HashHelper.ComputeFrom(input.Tick), new TransferInput
+        {
+            Symbol = inscriptionInfo.Ancestor,
+            Amount = reward,
+            To = Context.Sender
+        });
+        
+        Context.Fire(new Redeemed
+        {
+            Tick = input.Tick,
+            Account = Context.Sender,
+            AdoptId = input.AdoptId,
+            Level = input.Level,
+            Amount = outputAmount,
+            Symbol = adoptInfo.Symbol
+        });
+        
+        return new Empty();
+    }
+
     private Hash ComputeMergeInputHash(MergeInput input)
     {
         return HashHelper.ComputeFrom(new MergeInput
@@ -242,5 +311,15 @@ public partial class SchrodingerContract
         var random = Context.ConvertHashToInt64(randomHash, 0, SchrodingerContractConstants.Denominator);
 
         return random <= rate ? level.Add(1) : level;
+    }
+    
+    private Hash ComputeRedeemInputHash(RedeemInput input)
+    {
+        return HashHelper.ComputeFrom(new RedeemInput
+        {
+            Tick = input.Tick,
+            AdoptId = input.AdoptId,
+            Level = input.Level
+        }.ToByteArray());
     }
 }
