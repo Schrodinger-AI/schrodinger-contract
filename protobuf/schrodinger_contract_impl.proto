@@ -42,6 +42,7 @@ service SchrodingerContractImpl {
   rpc GetMergeConfig (google.protobuf.StringValue) returns (GetMergeConfigOutput) {option (aelf.is_view) = true;}
   rpc SetMergeRatesConfig (SetMergeRatesConfigInput) returns (google.protobuf.Empty) {}
   rpc Merge (MergeInput) returns (google.protobuf.Empty) {}
+  rpc Redeem (RedeemInput) returns (google.protobuf.Empty) {}
 }
 
 message SetRewardConfigInput {
@@ -192,6 +193,13 @@ message MergeInput {
   bytes signature = 10000;
 }
 
+message RedeemInput {
+  string tick = 1;
+  aelf.Hash adopt_id = 2;
+  int64 level = 3;
+  bytes signature = 10000;
+}
+
 // log event
 message RewardConfigSet {
   option (aelf.is_event) = true;
@@ -273,4 +281,14 @@ message VoucherAdoptionConfigSet {
   option (aelf.is_event) = true;
   string tick = 1;
   VoucherAdoptionConfig config = 2;
+}
+
+message Redeemed {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  aelf.Hash adopt_id = 2;
+  int64 level = 3;
+  aelf.Address account = 4;
+  string symbol = 5;
+  int64 amount = 6;
 }
