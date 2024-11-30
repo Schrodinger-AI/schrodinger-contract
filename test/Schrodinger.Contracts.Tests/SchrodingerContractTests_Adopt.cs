@@ -735,6 +735,34 @@ public partial class SchrodingerContractTests
         balance = await GetTokenBalance($"{_tick}-1", UserAddress);
         balance.ShouldBe(1_50000000);
     }
+    
+    [Fact]
+    public async Task AdoptMaxGenTests_Voucher()
+    {
+        await DeployForMaxGen();
+
+        await SchrodingerContractStub.SetVoucherAdoptionConfig.SendAsync(new SetVoucherAdoptionConfigInput
+        {
+            Tick = _tick,
+            VoucherAmount = 5
+        });
+
+        var output = await SchrodingerContractStub.GetAdoptionVoucherAmount.CallAsync(new GetAdoptionVoucherAmountInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.Value.ShouldBe(0);
+        
+        await AdoptMaxGen();
+        
+        output = await SchrodingerContractStub.GetAdoptionVoucherAmount.CallAsync(new GetAdoptionVoucherAmountInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.Value.ShouldBe(5);
+    }
 
     private async Task DeployForMaxGen()
     {
