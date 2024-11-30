@@ -196,13 +196,15 @@ public partial class SchrodingerContract
         Assert(IsStringValid(input!.Tick), "Invalid tick.");
         Assert(input.CommissionAmount >= 0, "Invalid commission amount.");
         Assert(input.PoolAmount >= 0, "Invalid pool amount.");
+        Assert(input.VoucherAmount >= 0, "Invalid voucher amount.");
         
         CheckInscriptionExistAndPermission(input.Tick);
 
         var config = new VoucherAdoptionConfig
         {
             CommissionAmount = input.CommissionAmount,
-            PoolAmount = input.PoolAmount
+            PoolAmount = input.PoolAmount,
+            VoucherAmount = input.VoucherAmount
         };
 
         if (config.Equals(State.VoucherAdoptionConfigMap[input.Tick])) return new Empty();

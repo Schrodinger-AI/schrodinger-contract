@@ -590,7 +590,8 @@ public partial class SchrodingerContractTests
         {
             Tick = _tick,
             CommissionAmount = 25000000,
-            PoolAmount = 25000000
+            PoolAmount = 25000000,
+            VoucherAmount = 5
         });
         result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
 
@@ -598,6 +599,7 @@ public partial class SchrodingerContractTests
         log.Tick.ShouldBe(_tick);
         log.Config.CommissionAmount.ShouldBe(25000000);
         log.Config.PoolAmount.ShouldBe(25000000);
+        log.Config.VoucherAmount.ShouldBe(5);
 
         var output =
             await SchrodingerContractStub.GetVoucherAdoptionConfig.CallAsync(new StringValue { Value = _tick });
@@ -652,6 +654,14 @@ public partial class SchrodingerContractTests
                 PoolAmount = -1
             });
         result.TransactionResult.Error.ShouldContain("Invalid pool amount.");
+        
+        result = await SchrodingerContractStub.SetVoucherAdoptionConfig.SendWithExceptionAsync(
+            new SetVoucherAdoptionConfigInput
+            {
+                Tick = "test",
+                VoucherAmount = -1
+            });
+        result.TransactionResult.Error.ShouldContain("Invalid voucher amount.");
 
         result = await SchrodingerContractStub.SetVoucherAdoptionConfig.SendWithExceptionAsync(
             new SetVoucherAdoptionConfigInput

@@ -218,7 +218,9 @@ public partial class SchrodingerContract
         adoptInfo.TokenName = GenerateTokenName(adoptInfo.Symbol, adoptInfo.Gen);
 
         State.SymbolCountMap[input.Tick] = symbolCount.Add(1);
-
+        
+        AddVoucher(input.Tick);
+        
         JoinPointsContract(input.Domain);
         // AdoptMaxGen has the same type of point with Adopt
         SettlePoints("Adopt", adoptInfo.InputAmount, inscriptionInfo.Decimals, nameof(AdoptMaxGen));
@@ -809,5 +811,22 @@ public partial class SchrodingerContract
         return config == null || number < config.Index
             ? amount
             : amount.Mul(config.Rate).Div(SchrodingerContractConstants.Denominator);
+    }
+
+    private void AddVoucher(string tick)
+    {
+        var config = State.VoucherAdoptionConfigMap[tick];
+        
+        if (config == null) return;
+        
+        State.AdoptionVoucherMap[tick][Context.Sender] = State.AdoptionVoucherMap[tick][Context.Sender]
+            .Add(config.VoucherAmount);
+            
+        Context.Fire(new VoucherAdded
+        {
+            Amount = config.VoucherAmount,
+            Tick = tick,
+            Account = Context.Sender
+        });
     }
 }

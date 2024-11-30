@@ -114,11 +114,13 @@ message SetVoucherAdoptionConfigInput {
   string tick = 1;
   int64 commission_amount = 2;
   int64 pool_amount = 3;
+  int64 voucher_amount = 4;
 }
 
 message VoucherAdoptionConfig {
   int64 commission_amount = 1;
   int64 pool_amount = 2;
+  int64 voucher_amount = 3;
 }
 
 message AirdropVoucherInput {
@@ -291,4 +293,11 @@ message Redeemed {
   aelf.Address account = 4;
   string symbol = 5;
   int64 amount = 6;
+}
+
+message VoucherAdded {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  aelf.Address account = 2;
+  int64 amount = 3;
 }
