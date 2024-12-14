@@ -417,6 +417,8 @@ message Adopted {
   string ancestor = 13;
   string symbol = 14;
   string token_name = 15;
+  int64 rebate_amount = 16;
+  int64 subsidy_amount = 17;
 }
 
 message Confirmed {

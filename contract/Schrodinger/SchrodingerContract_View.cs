@@ -158,7 +158,7 @@ public partial class SchrodingerContract
             output = new GetRewardConfigOutput
             {
                 List = State.RewardListMap[input.Value],
-                Pool = GetPoolAddress(input.Value)
+                Pool = GetSpinPoolAddress(input.Value)
             };
         }
 
@@ -207,7 +207,7 @@ public partial class SchrodingerContract
             MaximumLevel = State.MaximumLevelMap[input.Value],
             Config = State.MergeConfigMap[input.Value]
         };
-        
+
         var mergeRates = new MergeRates();
 
         for (var i = 1; i <= output.MaximumLevel; i++)
@@ -220,7 +220,7 @@ public partial class SchrodingerContract
         }
 
         output.MergeRates = mergeRates;
-        
+
         return output;
     }
 
@@ -237,5 +237,18 @@ public partial class SchrodingerContract
         {
             Value = State.SymbolCountMap[input.Value]
         };
+    }
+
+    public override BoolValue GetRedeemSwitchStatus(StringValue input)
+    {
+        return new BoolValue
+        {
+            Value = State.RedeemSwitch[input.Value]
+        };
+    }
+
+    public override RebateConfig GetRebateConfig(StringValue input)
+    {
+        return State.RebateConfig[input.Value];
     }
 }
