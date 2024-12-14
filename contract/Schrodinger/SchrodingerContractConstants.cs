@@ -33,6 +33,7 @@ public static class SchrodingerContractConstants
     public const int DefaultMaxAttributePerGen = 1;
     public const int DefaultMaxAttributeTraitTypeCount = 50;
     public const int DefaultFixedTraitTypeMaxCount = 5;
+    public const long DefaultInputAmount = 1_60000000;
     
     // math
     public const int Ten = 10;

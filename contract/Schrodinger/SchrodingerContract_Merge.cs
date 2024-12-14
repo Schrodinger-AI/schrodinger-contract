@@ -118,12 +118,14 @@ public partial class SchrodingerContract
         Assert(IsHashValid(input.AdoptId), "Invalid adopt id.");
         Assert(input.Level > 0, "Invalid level.");
         Assert(!input.Signature.IsNullOrEmpty(), "Invalid signature.");
-
+        
         Assert(
             RecoverAddressFromSignature(ComputeRedeemInputHash(input), input.Signature) ==
             State.SignatoryMap[input.Tick], "Invalid signature.");
 
         var inscriptionInfo = State.InscriptionInfoMap[input.Tick];
+        Assert(inscriptionInfo != null, "Inscription not found.");
+        Assert(State.RedeemSwitch[input.Tick], "Cannot redeem now.");
         
         var adoptInfo = State.AdoptInfoMap[input.AdoptId];
         Assert(adoptInfo != null, "Adopt id not found.");
@@ -175,6 +177,24 @@ public partial class SchrodingerContract
             Level = input.Level,
             Amount = outputAmount,
             Symbol = adoptInfo.Symbol
+        });
+        
+        return new Empty();
+    }
+
+    public override Empty SetRedeemSwitch(SetRedeemSwitchInput input)
+    {
+        Assert(input != null, "Invalid input.");
+        Assert(IsStringValid(input!.Tick), "Invalid tick.");
+
+        CheckInscriptionExistAndPermission(input.Tick);
+        
+        State.RedeemSwitch[input.Tick] = input.Switch;
+        
+        Context.Fire(new RedeemSwitchSet
+        {
+            Tick = input.Tick,
+            Switch = input.Switch
         });
         
         return new Empty();

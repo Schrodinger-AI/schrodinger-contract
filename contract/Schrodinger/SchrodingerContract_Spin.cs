@@ -26,7 +26,7 @@ public partial class SchrodingerContract
         {
             Tick = input.Tick,
             List = new RewardList { Data = { input.Rewards } },
-            Pool = GetPoolAddress(input.Tick)
+            Pool = GetSpinPoolAddress(input.Tick)
         });
 
         return new Empty();
@@ -161,7 +161,7 @@ public partial class SchrodingerContract
         State.SymbolCountMap[voucherInfo.Tick] = symbolCount.Add(1);
         
         ProcessAdoptWithVoucherTransfer(lossAmount, commissionAmount, outputAmount, inscriptionInfo.Recipient,
-            inscriptionInfo.Ancestor, voucherInfo.Tick);
+            inscriptionInfo.Ancestor, voucherInfo.Tick, out var subsidyAmount);
 
         Context.Fire(new VoucherConfirmed
         {
@@ -184,7 +184,8 @@ public partial class SchrodingerContract
             Gen = adoptInfo.Gen,
             Ancestor = inscriptionInfo.Ancestor,
             Symbol = adoptInfo.Symbol,
-            TokenName = adoptInfo.TokenName
+            TokenName = adoptInfo.TokenName,
+            SubsidyAmount = subsidyAmount
         });
 
         return new Empty();
@@ -268,7 +269,7 @@ public partial class SchrodingerContract
                 break;
             case RewardType.Token:
                 var symbol = State.InscriptionInfoMap[tick].Ancestor;
-                State.TokenContract.Transfer.VirtualSend(GetPoolHash(tick), new TransferInput
+                State.TokenContract.Transfer.VirtualSend(GetSpinPoolHash(tick), new TransferInput
                 {
                     Amount = reward.Amount,
                     Memo = "spin",
@@ -343,9 +344,9 @@ public partial class SchrodingerContract
     }
 
     private void ProcessAdoptWithVoucherTransfer(long lossAmount, long commissionAmount, long outputAmount,
-        Address recipient, string ancestor, string tick)
+        Address recipient, string ancestor, string tick, out long subsidyAmount)
     {
-        var poolHash = GetPoolHash(tick);
+        var poolHash = GetSpinPoolHash(tick);
 
         // transfer ancestor to virtual address
         if (lossAmount > 0)
@@ -380,5 +381,7 @@ public partial class SchrodingerContract
             Symbol = ancestor,
             Amount = amount
         });
+
+        subsidyAmount = lossAmount.Add(commissionAmount).Add(amount);
     }
 }
