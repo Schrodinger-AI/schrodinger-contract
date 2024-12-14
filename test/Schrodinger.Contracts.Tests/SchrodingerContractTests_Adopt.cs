@@ -1,6 +1,8 @@
+using System.Linq;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Contracts.MultiToken;
+using AElf.CSharp.Core;
 using AElf.Types;
 using Google.Protobuf.WellKnownTypes;
 using Shouldly;
@@ -196,28 +198,28 @@ public partial class SchrodingerContractTests
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             To = DefaultAddress
         });
 
         await TokenContractStub.Approve.SendAsync(new ApproveInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Spender = SchrodingerContractAddress
         });
 
         var result = await SchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
         {
             Tick = "SGR",
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Domain = "test"
         });
 
         var log = GetLogEvent<Adopted>(result.TransactionResult);
         log.Parent.ShouldBe(Gen0);
         log.ParentGen.ShouldBe(0);
-        log.InputAmount.ShouldBe(2_00000000);
+        log.InputAmount.ShouldBe(1_60000000);
         log.OutputAmount.ShouldBe(1_00000000);
         log.Attributes.Data.Count.ShouldBe(11);
         log.Gen.ShouldBe(9);
@@ -228,7 +230,7 @@ public partial class SchrodingerContractTests
         var adoptInfo = await SchrodingerContractStub.GetAdoptInfo.CallAsync(log.AdoptId);
         adoptInfo.Parent.ShouldBe(Gen0);
         adoptInfo.ParentGen.ShouldBe(0);
-        adoptInfo.InputAmount.ShouldBe(2_00000000);
+        adoptInfo.InputAmount.ShouldBe(1_60000000);
         adoptInfo.OutputAmount.ShouldBe(1_00000000);
         adoptInfo.Attributes.Data.Count.ShouldBe(11);
         adoptInfo.Gen.ShouldBe(9);
@@ -239,27 +241,114 @@ public partial class SchrodingerContractTests
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             To = UserAddress
         });
 
         await TokenContractUserStub.Approve.SendAsync(new ApproveInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Spender = SchrodingerContractAddress
         });
 
         result = await UserSchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
         {
             Tick = "SGR",
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Domain = "test"
         });
         result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
 
         var output = await SchrodingerContractStub.GetSymbolCount.CallAsync(new StringValue { Value = _tick });
         output.Value.ShouldBe(4);
+    }
+
+    [Fact]
+    public async Task AdoptMaxGenTests_WithRebateConfig()
+    {
+        await DeployForMaxGen();
+
+        await SchrodingerContractStub.SetRerollConfig.SendAsync(new SetRerollConfigInput
+        {
+            Index = 1,
+            Tick = _tick,
+            Rate = 5000
+        });
+
+        await SchrodingerContractStub.SetRebateConfig.SendAsync(new SetRebateConfigInput
+        {
+            Tick = _tick,
+            InputAmount = 1_60000000,
+            Intervals = { new RebateInterval
+            {
+                Start = 0,
+                End = 1_00000000,
+                Weight = 2000
+            } }
+        });
+
+        await TokenContractStub.Issue.SendAsync(new IssueInput
+        {
+            Symbol = Gen0,
+            Amount = 3_20000000,
+            To = DefaultAddress
+        });
+
+        await TokenContractStub.Approve.SendAsync(new ApproveInput
+        {
+            Symbol = Gen0,
+            Amount = 3_20000000,
+            Spender = SchrodingerContractAddress
+        });
+
+        var result = await SchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
+        {
+            Tick = "SGR",
+            Amount = 1_60000000,
+            Domain = "test"
+        });
+
+        var log = GetLogEvent<Adopted>(result.TransactionResult);
+        log.InputAmount.ShouldBe(1_60000000);
+        log.OutputAmount.ShouldBe(1_00000000);
+        log.LossAmount.Add(log.CommissionAmount.Add(log.RebateAmount)).ShouldBe(1_10000000);
+        log.SubsidyAmount.ShouldBe(0);
+        
+        await SchrodingerContractStub.SetRebateConfig.SendAsync(new SetRebateConfigInput
+        {
+            Tick = _tick,
+            InputAmount = 1_60000000,
+            Intervals = { new RebateInterval
+            {
+                Start = 1_10000000,
+                End = 1_30000000,
+                Weight = 2000
+            } }
+        });
+
+        var config = await SchrodingerContractStub.GetRewardConfig.CallAsync(new StringValue { Value = _tick });
+        await TokenContractStub.Issue.SendAsync(new IssueInput
+        {
+            Symbol = Gen0,
+            Amount = 1_00000000,
+            To = config.Pool
+        });
+        
+        result = await SchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
+        {
+            Tick = "SGR",
+            Amount = 1_60000000,
+            Domain = "test"
+        });
+
+        log = GetLogEvent<Adopted>(result.TransactionResult);
+        log.InputAmount.ShouldBe(1_60000000);
+        log.OutputAmount.ShouldBe(1_00000000);
+        log.LossAmount.ShouldBe(0);
+        log.CommissionAmount.ShouldBe(0);
+        log.RebateAmount.ShouldBeGreaterThan(1_10000000);
+        log.SubsidyAmount.ShouldBe(log.RebateAmount - 1_10000000);
     }
 
     [Fact]
@@ -326,27 +415,34 @@ public partial class SchrodingerContractTests
     {
         await DeployForMaxGen();
 
+        await SchrodingerContractStub.SetRerollConfig.SendAsync(new SetRerollConfigInput
+        {
+            Tick = _tick,
+            Rate = 5000,
+            Index = 1
+        });
+
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             To = UserAddress
         });
 
         await TokenContractUserStub.Approve.SendAsync(new ApproveInput
         {
             Symbol = Gen0,
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Spender = SchrodingerContractAddress
         });
 
         var balance = await GetTokenBalance(Gen0, UserAddress);
-        balance.ShouldBe(2_00000000);
+        balance.ShouldBe(1_60000000);
 
         var result = await UserSchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
         {
             Tick = _tick,
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Domain = "test"
         });
         var adoptId = GetLogEvent<Adopted>(result.TransactionResult).AdoptId;
@@ -369,13 +465,20 @@ public partial class SchrodingerContractTests
         adoptInfo.IsRerolled.ShouldBeTrue();
 
         balance = await GetTokenBalance(Gen0, UserAddress);
-        balance.ShouldBe(log.Amount);
+        balance.ShouldBe(log.Amount / 2);
     }
 
     [Fact]
     public async Task RerollAdoptionTests_Fail()
     {
         await DeployForMaxGen();
+
+        await SchrodingerContractStub.SetRerollConfig.SendAsync(new SetRerollConfigInput
+        {
+            Tick = _tick,
+            Rate = 5000,
+            Index = 1
+        });
 
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
@@ -581,23 +684,23 @@ public partial class SchrodingerContractTests
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
             Symbol = Gen0,
-            Amount = 4_00000000,
+            Amount = 3_20000000,
             To = UserAddress
         });
 
         var balance = await GetTokenBalance($"{_tick}-1", UserAddress);
-        balance.ShouldBe(4_00000000);
+        balance.ShouldBe(3_20000000);
 
         await TokenContractUserStub.Approve.SendAsync(new ApproveInput
         {
             Symbol = Gen0,
-            Amount = 4_00000000,
+            Amount = 3_20000000,
             Spender = SchrodingerContractAddress
         });
 
         var result = await UserSchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
         {
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Domain = "test",
             Tick = _tick
         });
@@ -612,12 +715,11 @@ public partial class SchrodingerContractTests
 
         result = await UserSchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
         {
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Domain = "test",
             Tick = _tick
         });
         var adoptId2 = GetLogEvent<Adopted>(result.TransactionResult).AdoptId;
-
         await UserSchrodingerContractStub.Confirm.SendAsync(new ConfirmInput
         {
             AdoptId = adoptId2,
@@ -662,7 +764,6 @@ public partial class SchrodingerContractTests
             Symbol = $"{_tick}-2",
             Domain = "test"
         });
-
         balance = await GetTokenBalance($"{_tick}-1", UserAddress);
         balance.ShouldBe(1_00000000);
 
@@ -685,23 +786,23 @@ public partial class SchrodingerContractTests
         await TokenContractStub.Issue.SendAsync(new IssueInput
         {
             Symbol = Gen0,
-            Amount = 4_00000000,
+            Amount = 3_20000000,
             To = UserAddress
         });
 
         var balance = await GetTokenBalance($"{_tick}-1", UserAddress);
-        balance.ShouldBe(4_00000000);
+        balance.ShouldBe(3_20000000);
 
         await TokenContractUserStub.Approve.SendAsync(new ApproveInput
         {
             Symbol = Gen0,
-            Amount = 4_00000000,
+            Amount = 3_20000000,
             Spender = SchrodingerContractAddress
         });
 
         var result = await UserSchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
         {
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Domain = "test",
             Tick = _tick
         });
@@ -709,7 +810,7 @@ public partial class SchrodingerContractTests
 
         result = await UserSchrodingerContractStub.AdoptMaxGen.SendAsync(new AdoptMaxGenInput
         {
-            Amount = 2_00000000,
+            Amount = 1_60000000,
             Domain = "test",
             Tick = _tick
         });
@@ -736,6 +837,59 @@ public partial class SchrodingerContractTests
         balance.ShouldBe(1_50000000);
     }
 
+    [Fact]
+    public async Task AdoptMaxGenTests_Voucher()
+    {
+        await DeployForMaxGen();
+
+        await SchrodingerContractStub.SetVoucherAdoptionConfig.SendAsync(new SetVoucherAdoptionConfigInput
+        {
+            Tick = _tick,
+            VoucherAmount = 5
+        });
+
+        var output = await SchrodingerContractStub.GetAdoptionVoucherAmount.CallAsync(new GetAdoptionVoucherAmountInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.Value.ShouldBe(0);
+
+        await AdoptMaxGen();
+
+        output = await SchrodingerContractStub.GetAdoptionVoucherAmount.CallAsync(new GetAdoptionVoucherAmountInput
+        {
+            Tick = _tick,
+            Account = DefaultAddress
+        });
+        output.Value.ShouldBe(5);
+    }
+
+    [Fact]
+    public async Task SetRebateConfigTests()
+    {
+        await DeployForMaxGen();
+
+        var result = await SchrodingerContractStub.SetRebateConfig.SendAsync(new SetRebateConfigInput
+        {
+            Tick = _tick,
+            InputAmount = 1_60000000,
+            Intervals = { new RebateInterval { Start = 0, End = 0, Weight = 2000 } }
+        });
+        result.TransactionResult.Status.ShouldBe(TransactionResultStatus.Mined);
+
+        var log = GetLogEvent<RebateConfigSet>(result.TransactionResult);
+        log.Tick.ShouldBe(_tick);
+        log.Config.InputAmount.ShouldBe(1_60000000);
+        log.Config.Intervals.First().ShouldBe(new RebateInterval
+        {
+            Start = 0, End = 0, Weight = 2000
+        });
+
+        var config = await SchrodingerContractStub.GetRebateConfig.CallAsync(new StringValue { Value = _tick });
+        config.ShouldBe(log.Config);
+    }
+
     private async Task DeployForMaxGen()
     {
         await DeployCollectionTest();
@@ -747,7 +901,7 @@ public partial class SchrodingerContractTests
             MaxGeneration = 9,
             ImageCount = 2,
             Decimals = 8,
-            CommissionRate = 1000,
+            CommissionRate = 5000,
             LossRate = 500,
             AttributeLists = GetAttributeListsForMaxGen(),
             Image = _image,

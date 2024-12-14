@@ -199,25 +199,28 @@ public partial class SchrodingerContract
 
         State.AdoptInfoMap[adoptId] = adoptInfo;
 
-        var rerollRate = State.RerollConfigMap[input.Tick]?.Rate ?? 0;
-        CalculateAmount(inscriptionInfo.MaxGenLossRate, inscriptionInfo.CommissionRate, rerollRate, input.Amount,
-            out var lossAmount, out var commissionAmount, out var outputAmount);
-
+        var randomHash = GetRandomHash(symbolCount);
         var minOutputAmount = new BigIntValue(SchrodingerContractConstants.Ten).Pow(inscriptionInfo.Decimals);
-        Assert(outputAmount >= minOutputAmount, "Input amount not enough.");
+        long.TryParse(minOutputAmount.Value, out var outputAmount);
 
-        adoptInfo.InputAmount = input.Amount;
+        CalculateAmount(input.Tick, outputAmount, inscriptionInfo.CommissionRate, randomHash, out var inputAmount,
+            out var lossAmount, out var commissionAmount, out var rebateAmount, out var subsidyAmount);
+        
+        Assert(input.Amount >= inputAmount, "Input amount not enough.");
+
+        adoptInfo.InputAmount = inputAmount;
         adoptInfo.OutputAmount = outputAmount;
 
-        ProcessAdoptTransfer(parent, input.Amount, lossAmount, commissionAmount, inscriptionInfo.Recipient,
-            inscriptionInfo.Ancestor, 0);
+        ProcessAdoptTransfer(inputAmount, lossAmount, commissionAmount, rebateAmount, subsidyAmount,
+            inscriptionInfo.Recipient, inscriptionInfo.Ancestor, input.Tick);
 
-        var randomHash = GetRandomHash(symbolCount);
         adoptInfo.Attributes = GenerateMaxAttributes(input.Tick, adoptInfo.Gen.Sub(1), randomHash);
         adoptInfo.Symbol = GenerateSymbol(input.Tick, symbolCount);
         adoptInfo.TokenName = GenerateTokenName(adoptInfo.Symbol, adoptInfo.Gen);
 
         State.SymbolCountMap[input.Tick] = symbolCount.Add(1);
+
+        AddVoucher(input.Tick);
 
         JoinPointsContract(input.Domain);
         // AdoptMaxGen has the same type of point with Adopt
@@ -228,7 +231,7 @@ public partial class SchrodingerContract
             AdoptId = adoptId,
             Parent = parent,
             ParentGen = 0,
-            InputAmount = input.Amount,
+            InputAmount = inputAmount,
             LossAmount = lossAmount,
             CommissionAmount = commissionAmount,
             OutputAmount = outputAmount,
@@ -239,7 +242,9 @@ public partial class SchrodingerContract
             Gen = adoptInfo.Gen,
             Ancestor = inscriptionInfo.Ancestor,
             Symbol = adoptInfo.Symbol,
-            TokenName = adoptInfo.TokenName
+            TokenName = adoptInfo.TokenName,
+            RebateAmount = rebateAmount,
+            SubsidyAmount = subsidyAmount
         });
 
         return new Empty();
@@ -390,21 +395,124 @@ public partial class SchrodingerContract
         }
     }
 
-    private void CalculateAmount(long lossRate, long commissionRate, long rerollRate, long inputAmount,
-        out long lossAmount,
-        out long commissionAmount, out long outputAmount)
+    // private void CalculateAmount(long lossRate, long commissionRate, long rerollRate, long inputAmount,
+    //     out long lossAmount, out long commissionAmount, out long outputAmount)
+    // {
+    //     // calculate amount
+    //     lossAmount = inputAmount.Mul(lossRate).Div(SchrodingerContractConstants.Denominator);
+    //     if (lossAmount == 0 && lossRate != 0) lossAmount = 1;
+    //
+    //     outputAmount = inputAmount.Sub(lossAmount);
+    //     if (rerollRate > 0) outputAmount = outputAmount.Div(rerollRate).Mul(SchrodingerContractConstants.Denominator);
+    //
+    //     commissionAmount = lossAmount.Mul(commissionRate).Div(SchrodingerContractConstants.Denominator);
+    //     if (commissionAmount == 0 && commissionRate != 0) commissionAmount = 1;
+    //
+    //     lossAmount = lossAmount.Sub(commissionAmount);
+    // }
+
+    private void CalculateAmount(string tick, long outputAmount, long commissionRate, Hash randomHash,
+        out long inputAmount, out long lossAmount, out long commissionAmount, out long rebateAmount,
+        out long subsidyAmount)
     {
-        // calculate amount
-        lossAmount = inputAmount.Mul(lossRate).Div(SchrodingerContractConstants.Denominator);
-        if (lossAmount == 0 && lossRate != 0) lossAmount = 1;
+        var rebateConfig = State.RebateConfig[tick];
+        var rerollRate = State.RerollConfigMap[tick]?.Rate ?? 0;
+        var actualValue = outputAmount.Sub(outputAmount.Mul(rerollRate).Div(SchrodingerContractConstants.Denominator));
 
-        outputAmount = inputAmount.Sub(lossAmount);
-        if (rerollRate > 0) outputAmount = outputAmount.Div(rerollRate).Mul(SchrodingerContractConstants.Denominator);
+        if (rebateConfig == null)
+        {
+            inputAmount = SchrodingerContractConstants.DefaultInputAmount;
+            rebateAmount = 0;
+            lossAmount = inputAmount.Sub(actualValue);
+        }
+        /* transfer from user: 1.6 SGR
+         * rebate: 0 ~ 1.3 SGR
+         * user actual paid: 0.3 ~ 1.6 SGR
+         * output: 1 cat
+         * reroll(actural value): 0.5 SGR
+         * then user may pay less than 0.5 SGR
+         * any more than 0.5 SGR is considered income
+         * any less than 0.5 SGR needs subsidy
+         */
+        else
+        {
+            inputAmount = rebateConfig.InputAmount;
+            rebateAmount = GenerateRebateAmount(rebateConfig, randomHash);
 
+            var payAmount = inputAmount.Sub(rebateAmount);
+
+            if (payAmount <= actualValue)
+            {
+                lossAmount = 0;
+                commissionAmount = 0;
+                subsidyAmount = actualValue.Sub(payAmount);
+
+                return;
+            }
+
+            lossAmount = payAmount.Sub(actualValue);
+        }
+
+        subsidyAmount = 0;
         commissionAmount = lossAmount.Mul(commissionRate).Div(SchrodingerContractConstants.Denominator);
-        if (commissionAmount == 0 && commissionRate != 0) commissionAmount = 1;
-
         lossAmount = lossAmount.Sub(commissionAmount);
+    }
+
+    private void ProcessAdoptTransfer(long inputAmount, long lossAmount, long commissionAmount, long rebateAmount,
+        long subsidyAmount, Address recipient, string ancestor, string tick)
+    {
+        // transfer ancestor from sender
+        State.TokenContract.TransferFrom.Send(new TransferFromInput
+        {
+            Amount = inputAmount,
+            From = Context.Sender,
+            To = Context.Self,
+            Symbol = ancestor
+        });
+
+        // send subsidy to contract
+        if (subsidyAmount > 0)
+        {
+            State.TokenContract.Transfer.VirtualSend(GetSpinPoolHash(tick), new TransferInput
+            {
+                Symbol = ancestor,
+                Amount = subsidyAmount,
+                To = Context.Self
+            });
+        }
+
+        // transfer ancestor to virtual address
+        if (lossAmount > 0)
+        {
+            State.TokenContract.Transfer.Send(new TransferInput
+            {
+                Symbol = ancestor,
+                Amount = lossAmount,
+                To = GetReceivingAddress(GetTickFromSymbol(ancestor))
+            });
+        }
+
+        // send commission to recipient
+        if (commissionAmount > 0)
+        {
+            State.TokenContract.Transfer.Send(new TransferInput
+            {
+                Amount = commissionAmount,
+                To = recipient,
+                Symbol = ancestor
+            });
+        }
+
+        // send rebate to send
+        if (rebateAmount > 0)
+        {
+            State.TokenContract.Transfer.Send(new TransferInput
+            {
+                Amount = rebateAmount,
+                To = Context.Sender,
+                Symbol = ancestor
+            });
+        }
     }
 
     private void ProcessAdoptTransfer(string symbol, long inputAmount, long lossAmount, long commissionAmount,
@@ -809,5 +917,57 @@ public partial class SchrodingerContract
         return config == null || number < config.Index
             ? amount
             : amount.Mul(config.Rate).Div(SchrodingerContractConstants.Denominator);
+    }
+
+    private void AddVoucher(string tick)
+    {
+        var config = State.VoucherAdoptionConfigMap[tick];
+
+        if (config == null) return;
+
+        State.AdoptionVoucherMap[tick][Context.Sender] = State.AdoptionVoucherMap[tick][Context.Sender]
+            .Add(config.VoucherAmount);
+
+        Context.Fire(new VoucherAdded
+        {
+            Amount = config.VoucherAmount,
+            Tick = tick,
+            Account = Context.Sender
+        });
+    }
+
+    private long GenerateRebateAmount(RebateConfig config, Hash randomHash)
+    {
+        var intervals = config.Intervals;
+        if (intervals == null || intervals.Count == 0) return 0;
+
+        var rebateInterval = GetRandomIntervals(randomHash, intervals);
+
+        var hash = HashHelper.ConcatAndCompute(randomHash, HashHelper.ComputeFrom(rebateInterval));
+        return Context.ConvertHashToInt64(hash, rebateInterval.Start, rebateInterval.End + 1);
+    }
+
+    private RebateInterval GetRandomIntervals(Hash randomHash, RepeatedField<RebateInterval> intervals)
+    {
+        long totalWeights = 0;
+
+        foreach (var interval in intervals)
+        {
+            totalWeights = totalWeights.Add(interval.Weight);
+        }
+
+        var hash = HashHelper.ConcatAndCompute(randomHash, HashHelper.ComputeFrom(nameof(RebateInterval)));
+
+        var random = Context.ConvertHashToInt64(hash, 0, totalWeights + 1);
+        var sum = 0L;
+
+        foreach (var interval in intervals)
+        {
+            sum = sum.Add(interval.Weight);
+
+            if (random <= sum) return interval;
+        }
+
+        return intervals.Last();
     }
 }

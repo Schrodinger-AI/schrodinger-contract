@@ -256,12 +256,12 @@ public partial class SchrodingerContract
         Context.Fire(logEvent);
     }
 
-    private Address GetPoolAddress(string tick)
+    private Address GetSpinPoolAddress(string tick)
     {
-        return Context.ConvertVirtualAddressToContractAddress(GetPoolHash(tick));
+        return Context.ConvertVirtualAddressToContractAddress(GetSpinPoolHash(tick));
     }
 
-    private Hash GetPoolHash(string tick)
+    private Hash GetSpinPoolHash(string tick)
     {
         return HashHelper.ConcatAndCompute(HashHelper.ComputeFrom(SchrodingerContractConstants.Spin),
             HashHelper.ComputeFrom(tick));

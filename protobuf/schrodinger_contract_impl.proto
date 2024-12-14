@@ -43,6 +43,12 @@ service SchrodingerContractImpl {
   rpc SetMergeRatesConfig (SetMergeRatesConfigInput) returns (google.protobuf.Empty) {}
   rpc Merge (MergeInput) returns (google.protobuf.Empty) {}
   rpc Redeem (RedeemInput) returns (google.protobuf.Empty) {}
+  rpc SetRedeemSwitch (SetRedeemSwitchInput) returns (google.protobuf.Empty) {};
+  rpc GetRedeemSwitchStatus (google.protobuf.StringValue) returns (google.protobuf.BoolValue) {option (aelf.is_view) = true;}
+  
+  // rebate
+  rpc SetRebateConfig (SetRebateConfigInput) returns (google.protobuf.Empty) {}
+  rpc GetRebateConfig (google.protobuf.StringValue) returns (RebateConfig) {option (aelf.is_view) = true;}
 }
 
 message SetRewardConfigInput {
@@ -114,11 +120,13 @@ message SetVoucherAdoptionConfigInput {
   string tick = 1;
   int64 commission_amount = 2;
   int64 pool_amount = 3;
+  int64 voucher_amount = 4;
 }
 
 message VoucherAdoptionConfig {
   int64 commission_amount = 1;
   int64 pool_amount = 2;
+  int64 voucher_amount = 3;
 }
 
 message AirdropVoucherInput {
@@ -198,6 +206,28 @@ message RedeemInput {
   aelf.Hash adopt_id = 2;
   int64 level = 3;
   bytes signature = 10000;
+}
+
+message SetRedeemSwitchInput {
+  string tick = 1;
+  bool switch = 2;
+}
+
+message SetRebateConfigInput {
+  string tick = 1;
+  repeated RebateInterval intervals = 2;
+  int64 input_amount = 3;
+}
+
+message RebateInterval {
+  int64 start = 1;
+  int64 end = 2;
+  int64 weight = 3;
+}
+
+message RebateConfig {
+  repeated RebateInterval intervals = 1;
+  int64 input_amount = 2;
 }
 
 // log event
@@ -291,4 +321,23 @@ message Redeemed {
   aelf.Address account = 4;
   string symbol = 5;
   int64 amount = 6;
+}
+
+message VoucherAdded {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  aelf.Address account = 2;
+  int64 amount = 3;
+}
+
+message RedeemSwitchSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  bool switch = 2;
+}
+
+message RebateConfigSet {
+  option (aelf.is_event) = true;
+  string tick = 1;
+  RebateConfig config = 2;
 }

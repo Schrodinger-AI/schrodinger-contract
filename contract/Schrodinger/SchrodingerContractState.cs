@@ -15,7 +15,7 @@ public partial class SchrodingerContractState : ContractState
 
     // tick -> random attribute infos(greater than 1)
     public MappedState<string, AttributeInfos> RandomTraitTypeMap { get; set; }
-    
+
     // tick -> inscription info
     public MappedState<string, InscriptionInfo> InscriptionInfoMap { get; set; }
 
@@ -31,7 +31,7 @@ public partial class SchrodingerContractState : ContractState
     // tick -> trait type -> value weights
     public MappedState<string, string, long> TraitValueTotalWeightsMap { get; set; }
     public MappedState<string, long> GenTotalWeightsMap { get; set; }
-    
+
     // tick -> signatory
     public MappedState<string, Address> SignatoryMap { get; set; }
 
@@ -41,49 +41,52 @@ public partial class SchrodingerContractState : ContractState
     // point contract
     public MappedState<Address, bool> JoinRecord { get; set; }
     public SingletonState<Hash> PointsContractDAppId { get; set; }
-    
+
     // action name -> proportion
     public MappedState<string, long> PointsProportion { get; set; }
     public SingletonState<Address> PointsSettleAdmin { get; set; }
-    
+
     // tick -> trait type -> upper weight sums
     public MappedState<string, string, LongList> UpperWeightSumsMap { get; set; }
+
     // tick -> trait type -> index -> trait values
     public MappedState<string, string, int, TraitValues> TraitValuesMap { get; set; }
-    
+
     public SingletonState<string> OfficialDomainAlias { get; set; }
-    
+
     // tick -> RewardList
     public MappedState<string, RewardList> RewardListMap { get; set; }
-    
+
     public MappedState<Hash, bool> SpinSignatureMap { get; set; }
 
     // spinId -> spinInfo
     public MappedState<Hash, SpinInfo> SpinInfoMap { get; set; }
-    
+
     public MappedState<Hash, VoucherInfo> VoucherInfoMap { get; set; }
-    
+
     // tick -> address -> long
     public MappedState<string, Address, long> AdoptionVoucherMap { get; set; }
-    
+
     // tick -> admin
     public MappedState<string, AddressList> AirdropControllerMap { get; set; }
-    
+
     // tick -> count
     public MappedState<string, long> VoucherIdCountMap { get; set; }
-    
+
     // tick -> config
     public MappedState<string, RerollConfig> RerollConfigMap { get; set; }
-    
+
     // tick -> MergeConfig
     public MappedState<string, MergeConfig> MergeConfigMap { get; set; }
-    
+
     // tick -> level -> rate
     public MappedState<string, long, long> MergeRatesMap { get; set; }
 
     // tick -> maximumLevel
     public MappedState<string, long> MaximumLevelMap { get; set; }
-    
+
     // tick -> VoucherAdoptionConfig
     public MappedState<string, VoucherAdoptionConfig> VoucherAdoptionConfigMap { get; set; }
+    public MappedState<string, RebateConfig> RebateConfig { get; set; }
+    public MappedState<string, bool> RedeemSwitch { get; set; }
 }
