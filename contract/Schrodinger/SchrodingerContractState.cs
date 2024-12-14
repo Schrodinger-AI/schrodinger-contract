@@ -87,6 +87,8 @@ public partial class SchrodingerContractState : ContractState
 
     // tick -> VoucherAdoptionConfig
     public MappedState<string, VoucherAdoptionConfig> VoucherAdoptionConfigMap { get; set; }
+    // tick
     public MappedState<string, RebateConfig> RebateConfig { get; set; }
+    // tick
     public MappedState<string, bool> RedeemSwitch { get; set; }
 }
